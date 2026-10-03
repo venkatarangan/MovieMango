@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- TV episode tracking: tick episodes, whole seasons or "watched up to here" on a show's page, see your progress and the next episode, and mark an ended show as watched when you're done. Syncs through Drive.
+
 ## 0.1.0 (2026-10-03)
 
 First release.

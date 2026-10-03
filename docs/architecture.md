@@ -16,4 +16,5 @@ A static PWA with no backend. The browser talks directly to TMDB, Wikipedia, Wor
 - **AI never invents titles.** TMDB supplies real candidates (filtered by the user's services, languages, runtime and certificate) and a scoring formula ranks them; the model only re-ranks and explains. If AI fails, the scored list is shown.
 - **Engine order:** Nano → Qwen (if downloaded) → Gemini (if a key is saved). Downloads only start when the user taps; Basic mode only when the user picks it.
 - **Sync:** one JSON file in Drive's `appDataFolder`, newest-wins per record. Tokens last about an hour, then the header shows "Reconnect Drive".
+- **Episodes:** TV progress lives on the item (`episodesSeen` per season, cached `nextEpisode`), so it syncs like any item change. Logic in `src/lib/episodes.ts`; Specials (season 0) don't count; unaired episodes are capped by `last_episode_to_air`. Season lists load only when expanded.
 - **Privacy:** fonts are self-hosted; analytics are built in only when `VITE_GA_ID` is set; review HTML is sanitised.
