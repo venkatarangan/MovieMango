@@ -151,7 +151,7 @@ export default function Tonight() {
           <Typography variant="h4" component="h1">
             {greeting()}
           </Typography>
-          <Typography color="text.secondary">How much time do you have, and how are you feeling?</Typography>
+          <Typography color="text.secondary">Pick your time and mood. We’ll find something on your services.</Typography>
         </Box>
         <Chip
           icon={<AutoAwesomeRoundedIcon />}
@@ -232,8 +232,8 @@ export default function Tonight() {
               fullWidth
               multiline
               maxRows={3}
-              label={choice?.id && choice.id !== 'basic' ? 'Or just tell me what you’re after (optional)' : 'Tell me what you’re after (needs AI)'}
-              placeholder="Something light in Tamil, under 2 hours, no romance…"
+              label={choice?.id && choice.id !== 'basic' ? 'Or just say what you’re after' : 'Say what you’re after (needs AI)'}
+              placeholder="A light Tamil film, under 2 hours, no romance"
               value={input.freeText ?? ''}
               disabled={!choice?.id || choice.id === 'basic'}
               onChange={(e) => update({ freeText: e.target.value })}
@@ -265,7 +265,7 @@ export default function Tonight() {
 
       {signal < 3 && !result && (
         <Alert severity="info" sx={{ mt: 2 }}>
-          Picks get much better once MovieMango knows your taste. <RouterLink to="/search">Search</RouterLink> for a few films you love and tap ♥ Favourite.
+          Tip: <RouterLink to="/search">search</RouterLink> for films you love and tap ♥ Favourite. Picks get better the more MovieMango knows you.
         </Alert>
       )}
 
@@ -296,7 +296,7 @@ export default function Tonight() {
             </Stack>
           ) : (
             <EmptyState emoji="🍿" title="Nothing fits all of that tonight">
-              Try more time, another mood, or add more services and languages in Settings.
+              Try more time or another mood, or add services and languages in Settings.
             </EmptyState>
           )}
         </Box>
