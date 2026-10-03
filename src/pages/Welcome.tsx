@@ -1,5 +1,5 @@
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded';
-import { Box, Button, CircularProgress, Container, LinearProgress, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Container, LinearProgress, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -7,7 +7,11 @@ import { discover, getWatchProviderCatalogue, snapshotFromList, type TmdbListIte
 import { ChipGroup } from '../components/ChipGroup';
 import { ErrorNote } from '../components/common';
 import EngineCard from '../components/EngineCard';
+import { GoogleSignInButton } from '../components/Drive';
 import { TmdbKeyForm } from '../components/KeyForms';
+import { db } from '../db';
+import { driveConfigured } from '../sync/google';
+import { connectDrive } from '../sync/sync';
 import { Wordmark } from '../components/Logo';
 import { Poster } from '../components/PosterCard';
 import { toggleList } from '../db/items';
@@ -18,7 +22,8 @@ import { resolveProviderIds, SERVICES } from '../lib/providers';
 import { dailyJitter } from '../reco/score';
 import type { MediaType } from '../lib/types';
 
-const STEPS = ['Welcome', 'TMDB key', 'You', 'Favourites', 'AI'];
+const STEPS = ['Welcome', 'Google Drive', 'TMDB key', 'You', 'Favourites', 'AI'];
+const STEP = { welcome: 0, drive: 1, tmdb: 2, you: 3, favourites: 4, ai: 5 };
 const TARGET = 10;
 
 type Tile = TmdbListItem & { type: MediaType };
@@ -56,6 +61,96 @@ async function loadTiles(languages: string[], services: string[]): Promise<Tile[
   return out.sort((a, b) => dailyJitter(a.id) - dailyJitter(b.id));
 }
 
+
+/**
+ * First-run, interactive Google Drive sign-in. On a returning user's new device this also restores
+ * their lists and keys, so the rest of setup can be skipped.
+ */
+function DriveStep({ onDone }: { onDone: (r: { full: boolean; hasKey: boolean }) => void }) {
+  const settings = useSettings();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<{ email: string; restoredItems: number; restoredLists: number; hadRemote: boolean } | null>(null);
+  const [skipping, setSkipping] = useState(false);
+  if (!settings) return null;
+
+  const signIn = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      setResult(await connectDrive({ fresh: true }));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const next = async () => {
+    const count = await db.items.count();
+    onDone({ full: !!settings.tmdbToken && count >= 5, hasKey: !!settings.tmdbToken });
+  };
+
+  return (
+    <Box>
+      <Typography variant="h4" component="h1">
+        Keep your picks safe
+      </Typography>
+      <Typography color="text.secondary" sx={{ mt: 1, maxWidth: 640 }}>
+        Sign in with Google to back up your lists, ratings and settings to <b>your own Google Drive</b>, and keep them in sync between your phone and computer. Already use MovieMango on another device? Sign in to bring everything over.
+      </Typography>
+      <Box component="ul" sx={{ pl: 2.5, mt: 2, color: 'text.secondary', '& li': { mb: 0.5 } }}>
+        <Typography component="li" variant="body2">MovieMango keeps one file in a hidden app folder in your Drive. It can’t see, open or change any of your other files.</Typography>
+        <Typography component="li" variant="body2">Your data goes straight from this browser to Google. There is no MovieMango server.</Typography>
+        <Typography component="li" variant="body2">You can disconnect any time in Settings, or from your Google Account’s security page.</Typography>
+      </Box>
+
+      {!driveConfigured() ? (
+        <Alert severity="info" sx={{ mt: 2 }}>
+          Google Drive sync isn’t configured in this build, so we’ll skip this step. (Developers: set <code>VITE_GOOGLE_CLIENT_ID</code>.)
+        </Alert>
+      ) : result ? (
+        <Alert severity="success" icon={<CheckCircleRoundedIcon />} sx={{ mt: 2 }}>
+          Connected as <b>{result.email || 'your Google account'}</b>.{' '}
+          {result.hadRemote
+            ? result.restoredItems || result.restoredLists
+              ? `Welcome back! We brought over ${result.restoredItems} title${result.restoredItems === 1 ? '' : 's'} and ${result.restoredLists} list${result.restoredLists === 1 ? '' : 's'} from your Drive.`
+              : 'Your Drive backup is up to date.'
+            : 'Your first backup is saved, and we’ll keep it in sync from now on.'}
+        </Alert>
+      ) : (
+        <Box sx={{ mt: 3 }}>
+          <GoogleSignInButton onClick={signIn} busy={busy} />
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            A Google window opens. Choose your account and allow access to MovieMango’s app folder.
+          </Typography>
+        </Box>
+      )}
+      {error && (
+        <Alert severity="error" sx={{ mt: 2 }} action={<Button color="inherit" size="small" onClick={signIn}>Try again</Button>}>
+          {error}
+        </Alert>
+      )}
+
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 4, flexWrap: 'wrap' }}>
+        {result || !driveConfigured() ? (
+          <Button variant="contained" size="large" onClick={next}>
+            Continue
+          </Button>
+        ) : skipping ? (
+          <Alert severity="warning" action={<Button color="inherit" size="small" onClick={next}>Skip anyway</Button>}>
+            Without Drive, your lists live only in this browser. Clearing browser data would erase them. You can connect later in Settings.
+          </Alert>
+        ) : (
+          <Button color="inherit" onClick={() => setSkipping(true)}>
+            Not now
+          </Button>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
 export default function Welcome() {
   const settings = useSettings();
   const navigate = useNavigate();
@@ -68,7 +163,7 @@ export default function Welcome() {
 
   const langs = languages ?? (settings?.onboarded ? settings.languages : detected.languages);
   const svcs = services ?? settings?.services ?? [];
-  const tiles = useQuery({ queryKey: ['onboarding-tiles', langs, svcs], queryFn: () => loadTiles(langs, svcs), enabled: step === 3 });
+  const tiles = useQuery({ queryKey: ['onboarding-tiles', langs, svcs], queryFn: () => loadTiles(langs, svcs), enabled: step === STEP.favourites });
 
   if (!settings) return null;
 
@@ -123,13 +218,15 @@ export default function Welcome() {
                 </Box>
               ))}
             </Stack>
-            <Button variant="contained" size="large" sx={{ mt: 5, px: 5 }} onClick={() => setStep(settings.tmdbToken ? 2 : 1)}>
+            <Button variant="contained" size="large" sx={{ mt: 5, px: 5 }} onClick={() => setStep(STEP.drive)}>
               Get started · about a minute
             </Button>
           </Box>
         )}
 
-        {step === 1 && (
+        {step === STEP.drive && <DriveStep onDone={(restored) => setStep(restored.full ? STEP.ai : restored.hasKey ? STEP.you : STEP.tmdb)} />}
+
+        {step === 2 && (
           <Box>
             <Typography variant="h4" component="h1">
               Connect to TMDB
@@ -145,7 +242,7 @@ export default function Welcome() {
           </Box>
         )}
 
-        {step === 2 && (
+        {step === 3 && (
           <Box>
             <Typography variant="h4" component="h1">
               Where and what you watch
@@ -179,7 +276,7 @@ export default function Welcome() {
           </Box>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <Box>
             <Typography variant="h4" component="h1">
               Tap {TARGET} you love
@@ -227,7 +324,7 @@ export default function Welcome() {
           </Box>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <Box>
             <Typography variant="h4" component="h1">
               Meet your AI movie buff
@@ -243,7 +340,7 @@ export default function Welcome() {
         )}
 
         {step > 0 && (
-          <Button color="inherit" sx={{ mt: 2, ml: step === 4 ? 2 : 0 }} onClick={() => setStep(step === 2 && settings.tmdbToken && !settings.onboarded ? 0 : step - 1)}>
+          <Button color="inherit" sx={{ mt: 2 }} onClick={() => setStep(step === STEP.you && settings.tmdbToken ? STEP.drive : step - 1)}>
             Back
           </Button>
         )}

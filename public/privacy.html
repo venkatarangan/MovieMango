@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MovieMango privacy</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<style>
+  :root { --bg: #FFFBF0; --fg: #1D2530; --muted: #5B6573; --accent: #27323F; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #12151A; --fg: #EEF1F5; --muted: #A9B4C2; --accent: #FED201; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { margin: 12px 0 4px; } h2 { margin-top: 28px; font-size: 1.15rem; }
+  p.lead { color: var(--muted); } a { color: var(--accent); }
+  header { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.2rem; }
+</style>
+</head>
+<body>
+<main>
+  <header><img src="/moviemango-logo.svg" alt="" width="40" height="40" /> MovieMango</header>
+  <h1>Privacy</h1>
+  <p class="lead">Short version: your data stays with you. MovieMango has no server and no accounts. Private · Free · Open.</p>
+
+  <h2>What stays in your browser</h2>
+  <p>Your lists, ratings, taste portrait, settings and API keys are stored in your browser (IndexedDB), and in your own Google Drive if you connect it. Backup files you download never include your keys.</p>
+
+  <h2>Google Drive</h2>
+  <p>If you sign in with Google, MovieMango saves one file to a hidden app folder in <b>your own</b> Google Drive, using the <code>drive.appdata</code> permission. It also reads your email address (the <code>openid</code> and <code>email</code> permissions) to show which account is connected. MovieMango can’t see, open or change any of your other files. The data goes directly from your browser to Google. Disconnect in Settings. To delete the Drive copy, remove MovieMango under Google Drive → Settings → Manage apps, or revoke access from your Google Account’s security page.</p>
+  <p>MovieMango’s use of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+
+  <h2>Who else MovieMango talks to</h2>
+  <ul>
+    <li><b>TMDB</b>: searches and title details, using your own key.</li>
+    <li><b>Wikipedia and Wikidata</b>: background summaries and, if you turn it on, today’s headlines.</li>
+    <li><b>WordPress.com</b>: Mangoidiots reviews, if turned on.</li>
+    <li><b>Google Gemini API</b>: only if you add your own key and use the cloud engine. On Google’s free tier, prompts may be used to improve Google’s products.</li>
+    <li><b>Hugging Face</b>: a one-time model download if you choose the Qwen engine.</li>
+    <li><b>Streaming services</b>: only when you tap Play.</li>
+  </ul>
+
+  <h2>Analytics</h2>
+  <p>The public site at watch.mangoidiots.com may use Google Analytics to count anonymous page views and which features are used. It never sends titles, lists, moods, ratings, review reads or keys, and advertising features are off. You can turn it off in Settings → Privacy.</p>
+
+  <h2>Contact</h2>
+  <p>Questions: open an issue on the project’s GitHub page. <a href="/">Back to MovieMango</a></p>
+</main>
+</body>
+</html>

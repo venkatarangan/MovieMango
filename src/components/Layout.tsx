@@ -5,6 +5,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { AppBar, BottomNavigation, BottomNavigationAction, Box, Button, Container, Link, Paper, Toolbar, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { SyncIndicator } from './Drive';
 import { Wordmark } from './Logo';
 
 const NAV = [
@@ -37,6 +38,7 @@ export default function Layout() {
             <Box component={RouterLink} to="/" sx={{ color: 'inherit', textDecoration: 'none', mr: 'auto' }} aria-label="MovieMango home">
               <Wordmark size={34} />
             </Box>
+            <SyncIndicator />
             {desktop
               ? NAV.map((n, i) => (
                   <Button

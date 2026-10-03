@@ -109,3 +109,35 @@ export async function mockApis(page: Page) {
   );
   await page.route('https://www.googletagmanager.com/**', (route) => route.abort());
 }
+
+/** Fake Google sign-in (GIS) and a fake Drive appDataFolder holding at most one file. */
+export async function mockGoogle(page: Page, existing: unknown = null) {
+  await page.addInitScript(() => {
+    (window as unknown as { google: unknown }).google = {
+      accounts: {
+        oauth2: {
+          initTokenClient: (cfg: { callback: (r: object) => void }) => ({
+            requestAccessToken: () => setTimeout(() => cfg.callback({ access_token: 'test-token', expires_in: 3600 }), 50),
+          }),
+          hasGrantedAllScopes: () => true,
+          revoke: () => {},
+        },
+      },
+    };
+  });
+  const drive = { file: existing as unknown, uploads: 0 };
+  await page.route('https://www.googleapis.com/oauth2/v3/userinfo', (route) => route.fulfill({ json: { email: 'tester@example.com' } }));
+  await page.route('https://www.googleapis.com/drive/v3/files**', (route) => {
+    const url = route.request().url();
+    if (url.includes('alt=media')) return route.fulfill({ json: drive.file });
+    return route.fulfill({ json: { files: drive.file ? [{ id: 'f1', modifiedTime: new Date().toISOString() }] : [] } });
+  });
+  await page.route('https://www.googleapis.com/upload/drive/v3/files**', async (route) => {
+    const req = route.request();
+    const body = req.postData() ?? '';
+    drive.uploads++;
+    drive.file = req.method() === 'PATCH' ? JSON.parse(body) : JSON.parse(body.split('\r\n\r\n')[2].split('\r\n--')[0]);
+    return route.fulfill({ json: { id: 'f1' } });
+  });
+  return drive;
+}

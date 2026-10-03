@@ -1,12 +1,13 @@
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import UploadRoundedIcon from '@mui/icons-material/UploadRounded';
-import { Alert, Box, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router';
 import { listGeminiModels } from '../ai/gemini';
 import { deleteQwen, QWEN_MODELS } from '../ai/qwen';
 import { ChipGroup } from '../components/ChipGroup';
+import { DriveCard } from '../components/Drive';
 import EngineCard from '../components/EngineCard';
 import { useEngine } from '../components/EngineContext';
 import { TmdbKeyForm } from '../components/KeyForms';
@@ -131,9 +132,13 @@ export default function SettingsPage() {
           <TmdbKeyForm compact />
         </Section>
 
+        <Section title="Google Drive backup and sync">
+          <DriveCard />
+        </Section>
+
         <Section title="Your data">
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Everything lives in this browser. Back it up to a file, or restore it on another device. Backups never include your API keys.
+            Everything lives in this browser (and in your Drive, if connected). You can also back up to a file. Backup files never include your API keys.
           </Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
             <Button variant="outlined" color="inherit" startIcon={<DownloadRoundedIcon />} onClick={exportBackup}>
@@ -150,9 +155,6 @@ export default function SettingsPage() {
               Erase everything
             </Button>
           </Box>
-          <Alert severity="info" sx={{ mt: 2 }}>
-            Google Drive backup is coming in a later version.
-          </Alert>
         </Section>
 
         <Section title="Privacy">
