@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -842,3 +842,13 @@ Full guide: `docs/testing-locally.md`.
 - The certificate was still pending, so the custom domain was removed and re-added in Pages. GitHub issued a Let's Encrypt certificate for `watch.mangoidiots.com` within a minute (valid to 2027-01-01, renews automatically).
 - **Enforce HTTPS** is on. `https://watch.mangoidiots.com` returns 200, `http://` redirects to `https://`, and `venkatarangan.github.io/MovieMango` redirects to the custom domain.
 - Updated `docs/operations.md` (HTTPS status and the fix for a stuck certificate) and `CLAUDE.md` (infra complete, social features out of scope).
+
+---
+
+## 19. Eleventh-round prompt (verbatim) and response
+
+> for a future version remember these improvements, when I ask you for them and instruct you to do them. 1. allow bulk import and export of titles as a markdown from any source manually by user, give a sample in that page for users to prepare a markdown or helping users to use ai to get it from 3rd party sources - this works for each list or entire lists. 2. add support for mcp interface for any ai agent running locally in this machine to the app running locally in this machine's browser, only available for pc and mac; 3. allow feature to add custom movies or tv shows, i should be able to add the basic titles: title name in english, in unicode, description, director, actors, external url for more information - this is to facilitate adding titles not in tmdb, and should support both movies and tv shows. 4. give me daily recommendations or weekend recommendations by notifications in the app.
+
+Recorded as a backlog, not built. It's in the **Backlog** section of `CLAUDE.md` and in Claude's project memory, to be done only when the owner asks. Notes to keep in mind:
+- MCP needs a small localhost bridge or an extension, because a web page can't host an MCP server.
+- Notifications without a backend are limited to in-app reminders and Periodic Background Sync on an installed Chrome PWA. There's no web push.
