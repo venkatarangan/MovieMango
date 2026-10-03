@@ -34,6 +34,16 @@ function tmdb(path: string, search: URLSearchParams) {
     const offset = langOffset + (Number(search.get('page') ?? 1) - 1) * 20 + (search.get('sort_by')?.includes('vote_average') ? 40 : 0) + (search.get('primary_release_date.lte') ? 80 : 0);
     return page(Array.from({ length: 20 }, (_, i) => 100 + i + offset));
   }
+  // Typed searches (imports): every title whose name matches, as three versions (e.g. "Starfall", "Starfall 11", "Starfall 12").
+  const typed = path.match(/^\/search\/(movie|tv)$/);
+  if (typed) {
+    const q = (search.get('query') ?? '').toLowerCase();
+    const ids = NAMES.flatMap((n, i) => (q && (n.toLowerCase().includes(q) || q.includes(n.toLowerCase())) ? [100 + i, 110 + i, 120 + i] : []));
+    const p = page(ids);
+    return typed[1] === 'tv' ? { ...p, results: p.results.map((r) => ({ ...r, name: r.title, title: undefined, first_air_date: r.release_date, release_date: undefined })) } : p;
+  }
+  if (path.startsWith('/find/')) return { movie_results: [title(105)], tv_results: [] };
+  if (path.startsWith('/search') && search.get('query')?.includes('zzz')) return page([]);
   if (path.startsWith('/trending') || path.startsWith('/search')) return { ...page([101, 102, 103, 104, 105, 106, 107, 108]), results: page([101, 102, 103, 104, 105, 106, 107, 108]).results.map((r) => ({ ...r, media_type: 'movie' })) };
   if (path.endsWith('/recommendations')) return page([150, 151, 152, 153]);
   const m = path.match(/^\/(movie|tv)\/(\d+)$/);

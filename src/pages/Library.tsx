@@ -1,15 +1,18 @@
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
+import FileUploadRoundedIcon from '@mui/icons-material/FileUploadRounded';
 import { Box, Button, Card, CardActionArea, Tab, Tabs, Typography } from '@mui/material';
 import { useState } from 'react';
-import { Link as RouterLink, useSearchParams } from 'react-router';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router';
 import { EmptyState } from '../components/common';
+import CustomTitleDialog from '../components/CustomTitleDialog';
 import { NewListDialog } from '../components/ListActions';
 import PosterCard, { PosterGrid } from '../components/PosterCard';
 import ShareButton from '../components/ShareButton';
 import TastePortrait from '../components/TastePortrait';
 import { listLabel, useAllItems, useCustomLists, useListItems } from '../db/items';
 import { everythingToText, listToText, safeFilename } from '../lib/exportText';
+import { listsToMarkdown } from '../lib/markdown';
 import { MAX_CUSTOM_LISTS } from '../lib/types';
 
 const BUILTIN = ['favourite', 'watchlist', 'watched'] as const;
@@ -34,7 +37,7 @@ function BuiltinList({ list }: { list: string }) {
         <Typography color="text.secondary">
           {items.length} title{items.length === 1 ? '' : 's'}
         </Typography>
-        <ShareButton title={listLabel[list]} filename={safeFilename(listLabel[list])} build={() => listToText(`My ${listLabel[list]}`, items)} what="list" />
+        <ShareButton title={listLabel[list]} filename={safeFilename(listLabel[list])} build={() => listToText(`My ${listLabel[list]}`, items)} markdown={() => listsToMarkdown([{ name: listLabel[list], items }])} what="list" />
       </Box>
       <PosterGrid>
         {items.map((i) => (
@@ -97,16 +100,17 @@ export default function Library() {
   const [params, setParams] = useSearchParams();
   const tab = Math.max(0, TABS.indexOf(params.get('tab') ?? ''));
   const setTab = (i: number) => setParams(i ? { tab: TABS[i] } : {}, { replace: true });
+  const [adding, setAdding] = useState(false);
   const items = useAllItems();
   const lists = useCustomLists();
+  const navigate = useNavigate();
 
-  const exportAll = () => {
+  const sections = (prefix: string) => {
     const all = items ?? [];
-    const sections = [
-      ...BUILTIN.map((b) => ({ name: `My ${listLabel[b]}`, items: all.filter((i) => i.lists.includes(b)) })),
+    return [
+      ...BUILTIN.map((b) => ({ name: `${prefix}${listLabel[b]}`, items: all.filter((i) => i.lists.includes(b)) })),
       ...(lists ?? []).map((l) => ({ name: `${l.emoji ?? ''} ${l.name}`.trim(), items: all.filter((i) => i.lists.includes(l.id)) })),
     ];
-    return everythingToText(sections);
   };
 
   return (
@@ -115,8 +119,17 @@ export default function Library() {
         <Typography variant="h4" component="h1">
           Your library
         </Typography>
-        <ShareButton title="My MovieMango lists" filename={safeFilename('all-lists')} build={exportAll} label="Export all" what="all" />
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button color="inherit" startIcon={<AddRoundedIcon />} onClick={() => setAdding(true)}>
+            Add your own
+          </Button>
+          <Button color="inherit" startIcon={<FileUploadRoundedIcon />} component={RouterLink} to="/import">
+            Import
+          </Button>
+          <ShareButton title="My MovieMango lists" filename={safeFilename('all-lists')} build={() => everythingToText(sections('My '))} markdown={() => listsToMarkdown(sections(''))} label="Export all" what="all" />
+        </Box>
       </Box>
+      <CustomTitleDialog open={adding} onClose={() => setAdding(false)} onSaved={(s) => navigate(`/title/${s.type}/${s.tmdbId}`)} />
       <Box sx={{ mt: 2 }}>
         <TastePortrait />
       </Box>

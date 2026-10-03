@@ -78,6 +78,17 @@ describe('planTonight (mocked TMDB)', () => {
     expect(r.picks.map((p) => [p.snap.title, p.why])).toEqual([['A Comedy', 'A laugh tonight.']]);
   });
 
+  it('never asks TMDB about custom titles, and never picks them', async () => {
+    const custom = (lists: string[], id: number): UserItem => ({ key: `movie:${id}`, tmdbId: id, type: 'movie', title: `Home video ${id}`, genreIds: [53], originalLanguage: 'ta', lists, addedAt: 0, updatedAt: 0 });
+    const items = [watched, custom(['favourite'], -11), custom(['watchlist'], -12), { ...custom(['watched'], -13), rating: 'delicious' as const }];
+    const r = await planTonight(input, settings, items, null);
+    const urls = vi.mocked(fetch).mock.calls.map(([u]) => String(u));
+    expect(urls.some((u) => /\/-\d+/.test(u))).toBe(false);
+    expect(r.picks.map((p) => p.snap.title)).toEqual(['Fits Perfectly']);
+    const again = await planTonight({ ...input, discovery: 'rewatch' }, settings, items, null);
+    expect(again.picks.every((p) => p.snap.tmdbId > 0)).toBe(true);
+  });
+
   it('falls back to Basic when the AI fails', async () => {
     const broken: AiEngine = { id: 'nano', label: 'broken', generateJson: async () => 'not json at all' };
     const r = await planTonight({ ...input, want: undefined }, { ...settings, services: ['netflix', 'prime'] }, [watched], broken);

@@ -1,0 +1,6 @@
+Drive sync needs one step from you. It's built, but it stays off until the site has a Google OAuth Client ID, and that has to be created in your Google account:
+1. In the Google Cloud console, create a project and enable the Google Drive API.
+2. In Google Auth Platform, choose audience External, add yourself as a test user, and add the scopes drive.appdata, openid and userinfo.email.
+3. Create a Web application client with JavaScript origins https://watch.mangoidiots.com, http://localhost:5173 and http://localhost:4173.
+4. Put the client ID in the GitHub repo under Settings → Secrets and variables → Actions → Variables, as GOOGLE_CLIENT_ID. For local testing, also add VITE_GOOGLE_CLIENT_ID=… to .env.local.
+5. Before sharing the app with others, publish it in Google Auth Platform and use https://watch.mangoidiots.com/privacy.html as the privacy policy URL. Until then, only listed test users can sign in.
