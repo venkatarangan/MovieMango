@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–2 are the first round, §3–4 the second, §5–6 the third, §7–8 the first build, §9–10 Google Drive sign-in, and §11–12 local testing and docs. **Later rounds replace earlier ones where they differ.** §6 is the current design; §8 and §10 record what has been built.
+> **Status:** rounds 1–2 (§1–6) are design, §7–8 the first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing. **Later rounds replace earlier ones where they differ.**
 
 ---
 
@@ -795,3 +795,18 @@ Full guide: `docs/testing-locally.md`.
 | `README.md` | Links to the docs above |
 
 **Housekeeping:** `tsconfig.tsbuildinfo` was removed from git and is now ignored.
+
+---
+
+## 13. Eighth-round prompt (verbatim)
+
+> overall write the readme, docs and app main screen and about - keep them short and to point, no need to be unnecessarily verbose, especially on the technical side, as devs are smart and likely to use ai agents to understand the code and the app, for end-user give explanations. publish to github, setup the github pages at watch.mangoidiots.com, give me instructions for dns entry with cloudflare I will do it manually. the reason for me to use this app is (rephrase and reword to sound nice, write it short and convey the spirit and point of what I am trying here without being too long and boring) "I am a movie fan, like to watch world movies apart from Indian and Hollywood movies, keeping track of movies tv shows that are good, that I would like to watch, discovering new ones based on my likes, and not having the data locked with OTT Services, big tech or pay ridiculous subscription just for a cloud database storage has been something I have been wanting to avoid and I was planning to write an app myself for years, but never found the time. i have saved my movie watched list, watch list in google, imdb, youtube, justwatch, plex and had to manually keep exporting and importing, managing it across services and finding what I want when I want has always been a problem. thanks to claude ai, now I could write an app that solves my problem for me, without spending much and keep owning data I generate with me, so that in future I can use my AI assistant to operate on it".
+
+---
+
+## 14. Response: concise docs, "Why I built this", publishing
+
+- **"Why I built this"** (README and About): a short rewrite of the author's story covering world cinema, lists scattered across Google, IMDb, YouTube, JustWatch and Plex, no lock-in or cloud subscription, built at last with Claude, and data owned and ready for a personal AI assistant.
+- **Shortened:** README (end-user first, a short developer section), About page, Tonight page wording, `docs/testing-locally.md`, `docs/architecture.md` and the changelog.
+- **Published:** `github.com/venkatarangan/MovieMango` (public), GitHub Pages deployed from Actions with the custom domain `watch.mangoidiots.com`.
+- **Cloudflare DNS (done manually by the owner):** a `CNAME` record `watch` → `venkatarangan.github.io`, **DNS only** (grey cloud). Then turn on **Enforce HTTPS** in GitHub Pages once the certificate is issued.
