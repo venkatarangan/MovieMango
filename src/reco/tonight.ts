@@ -158,7 +158,7 @@ function basicWhy(c: Candidate, input: TonightInput): string {
   else if (c.sources.has('rewatch')) parts.push('An old favourite');
   else if (c.sources.has('serendipity')) parts.push('A well-loved pick off your usual path');
   const genres = c.snap.genreIds.slice(0, 2).map(genreName).join(' / ').toLowerCase();
-  if (genres) parts.push(`a ${genres}`);
+  if (genres) parts.push(`${/^[aeiou]/.test(genres) ? 'an' : 'a'} ${genres}`);
   if (c.snap.runtime && input.minutes !== 'binge') parts.push(`${formatRuntime(c.snap.runtime)}${c.snap.type === 'tv' ? ' episodes' : ''} — fits your time`);
   if (c.mango === 'delicious' || c.mango === 'ripe') parts.push(`rated ${c.mango[0].toUpperCase() + c.mango.slice(1)} by Mangoidiots`);
   return parts.length ? `${parts.join(', ')}.`.replace(/^./, (s) => s.toUpperCase()) : 'A strong match for tonight.';

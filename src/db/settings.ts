@@ -23,6 +23,10 @@ export interface Settings {
   /** Google Drive sync: set once the user signs in. */
   driveConnected: boolean;
   driveEmail: string;
+  /** Sync about 15 s after each change and on start; when off, only "Sync now" syncs. Per device. */
+  driveAutoSync: boolean;
+  /** Keep the TMDB and Gemini keys in the Drive file so other devices pick them up. Per device. */
+  driveSyncKeys: boolean;
   lastSyncAt: number;
   /** When a synced setting last changed, for newest-wins merging across devices. */
   settingsUpdatedAt: number;
@@ -46,6 +50,8 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
   driveConnected: false,
   driveEmail: '',
+  driveAutoSync: true,
+  driveSyncKeys: true,
   lastSyncAt: 0,
   settingsUpdatedAt: 0,
 };

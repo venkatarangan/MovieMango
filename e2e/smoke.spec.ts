@@ -46,7 +46,7 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await page.screenshot({ path: shot('05-ai', p), fullPage: true });
   await page.getByRole('button', { name: /Show me tonight/ }).click();
 
-  await expect(page).toHaveURL(/#\/$/);
+  await expect(page).toHaveURL(/#\/tonight$/);
   // Headless Chromium has neither Gemini Nano nor WebGPU, and there's no key: the app offers Basic mode.
   await page.getByRole('button', { name: /Use Basic mode/ }).click();
   await page.getByRole('radio', { name: /Tired/ }).click();
@@ -57,6 +57,26 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await expect(page.getByText(/Ranked without AI/)).toBeVisible();
   expect(await page.getByRole('button', { name: 'Not tonight' }).count()).toBeGreaterThan(0);
   await page.screenshot({ path: shot('07-picks', p), fullPage: true });
+
+  // Home: search first, then three lucky picks and the shelves.
+  await page.goto('/#/');
+  await expect(page.getByRole('combobox', { name: 'Search movies and TV shows' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Feeling lucky/ })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Movies for you' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { name: 'Shows for you' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Tonight' }).first()).toBeVisible();
+  const lucky = page.locator('.MuiCard-root', { has: page.getByRole('heading', { name: /Feeling lucky/ }) });
+  await expect(lucky.locator('a[href^="#/title/"]').first()).toBeVisible({ timeout: 30_000 });
+  await page.screenshot({ path: shot('06b-home', p), fullPage: true });
+  await page.getByRole('combobox', { name: 'Search movies and TV shows' }).fill('Madras');
+  await expect(page.getByRole('option', { name: /Madras Nights/ }).first()).toBeVisible();
+  await page.screenshot({ path: shot('06c-home-search', p) });
+  await page.keyboard.press('Escape');
+
+  // A plain ?q= link opens Search.
+  await page.goto('/?q=Madras');
+  await expect(page).toHaveURL(/#\/search\?q=Madras/);
+  await expect(page.getByText(/Results for “Madras”/)).toBeVisible();
 
   await page.goto('/#/title/movie/103');
   await expect(page.getByRole('heading', { name: 'Madras Nights', exact: true })).toBeVisible();

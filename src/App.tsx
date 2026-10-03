@@ -7,7 +7,7 @@ import Layout from './components/Layout';
 import { ToastProvider } from './components/Toast';
 import { useSettings } from './db/settings';
 import { setAnalytics, trackPage } from './lib/analytics';
-import Tonight from './pages/Tonight';
+import Home from './pages/Home';
 
 const About = lazy(() => import('./pages/About'));
 const Library = lazy(() => import('./pages/Library'));
@@ -17,6 +17,7 @@ const Reviews = lazy(() => import('./pages/Reviews'));
 const Search = lazy(() => import('./pages/Search'));
 const SettingsPage = lazy(() => import('./pages/Settings'));
 const Title = lazy(() => import('./pages/Title'));
+const Tonight = lazy(() => import('./pages/Tonight'));
 const Welcome = lazy(() => import('./pages/Welcome'));
 import { createAppTheme } from './theme';
 
@@ -71,7 +72,8 @@ export default function App() {
                 <Routes>
                   <Route path="/welcome" element={<Welcome />} />
                   <Route element={<Layout />}>
-                    <Route path="/" element={<RequireSetup><Tonight /></RequireSetup>} />
+                    <Route path="/" element={<RequireSetup><Home /></RequireSetup>} />
+                    <Route path="/tonight" element={<RequireSetup><Tonight /></RequireSetup>} />
                     <Route path="/search" element={<RequireSetup><Search /></RequireSetup>} />
                     <Route path="/title/:type/:id" element={<RequireSetup><Title /></RequireSetup>} />
                     <Route path="/library" element={<RequireSetup><Library /></RequireSetup>} />

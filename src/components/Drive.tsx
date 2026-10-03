@@ -1,9 +1,9 @@
 import CloudDoneRoundedIcon from '@mui/icons-material/CloudDoneRounded';
 import CloudOffRoundedIcon from '@mui/icons-material/CloudOffRounded';
 import CloudSyncRoundedIcon from '@mui/icons-material/CloudSyncRounded';
-import { Alert, Box, Button, Chip, CircularProgress, IconButton, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, FormControlLabel, IconButton, Switch, Tooltip, Typography } from '@mui/material';
 import { useState } from 'react';
-import { useSettings } from '../db/settings';
+import { saveSettings, useSettings } from '../db/settings';
 import { driveConfigured } from '../sync/google';
 import { connectDrive, disconnectDrive, reconnectDrive, syncNow, useSyncState } from '../sync/sync';
 import { useToast } from './Toast';
@@ -46,6 +46,7 @@ const ago = (t: number) => {
 /** Small cloud icon in the header showing sync state; tap to reconnect or retry. */
 export function SyncIndicator() {
   const sync = useSyncState();
+  const settings = useSettings();
   const toast = useToast();
   if (sync.status === 'off') return null;
   if (sync.status === 'needs-auth')
@@ -58,14 +59,23 @@ export function SyncIndicator() {
         onClick={() => reconnectDrive().then(() => toast('Synced with Google Drive')).catch((e: Error) => toast(e.message, 'error'))}
       />
     );
-  const busy = sync.status === 'syncing' || sync.status === 'pending';
+  const manualPending = sync.status === 'pending' && settings?.driveAutoSync === false;
+  const busy = sync.status === 'syncing' || (sync.status === 'pending' && !manualPending);
   const title =
-    sync.status === 'error' ? `Sync problem: ${sync.error}. Tap to retry.` : busy ? 'Syncing with Google Drive…' : `Synced with Google Drive ${ago(sync.lastSyncAt)}`;
+    sync.status === 'error'
+      ? `Sync problem: ${sync.error}. Tap to retry.`
+      : manualPending
+        ? 'Changes not synced yet. Tap to sync with Google Drive.'
+        : busy
+          ? 'Syncing with Google Drive…'
+          : `Synced with Google Drive ${ago(sync.lastSyncAt)}`;
   return (
     <Tooltip title={title}>
       <IconButton size="small" onClick={() => void syncNow()} aria-label={title} color={sync.status === 'error' ? 'error' : 'inherit'}>
         {sync.status === 'error' ? (
           <CloudOffRoundedIcon fontSize="small" />
+        ) : manualPending ? (
+          <CloudSyncRoundedIcon fontSize="small" sx={{ color: 'warning.main' }} />
         ) : busy ? (
           <CloudSyncRoundedIcon fontSize="small" sx={{ opacity: 0.7 }} />
         ) : (
@@ -73,6 +83,29 @@ export function SyncIndicator() {
         )}
       </IconButton>
     </Tooltip>
+  );
+}
+
+function SyncOptions() {
+  const settings = useSettings();
+  if (!settings) return null;
+  return (
+    <Box sx={{ mt: 2 }}>
+      <FormControlLabel
+        control={<Switch checked={settings.driveAutoSync} onChange={(e) => saveSettings({ driveAutoSync: e.target.checked }).then(() => (e.target.checked ? syncNow() : undefined))} />}
+        label="Sync automatically"
+      />
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 6, mt: -0.5, mb: 1 }}>
+        On: changes are saved to Drive a few seconds after you make them. Off: only when you tap Sync now (the cloud icon turns orange when there’s something to sync).
+      </Typography>
+      <FormControlLabel
+        control={<Switch checked={settings.driveSyncKeys} onChange={(e) => saveSettings({ driveSyncKeys: e.target.checked }).then(() => syncNow())} />}
+        label="Include my TMDB and Gemini keys"
+      />
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 6, mt: -0.5 }}>
+        Handy: a new phone or laptop picks up your keys when you sign in. Off: keys stay on this device only, and any copy in Drive is removed.
+      </Typography>
+    </Box>
   );
 }
 
@@ -131,6 +164,7 @@ export function DriveCard() {
               Disconnect
             </Button>
           </Box>
+          <SyncOptions />
         </>
       ) : (
         <GoogleSignInButton busy={busy} onClick={() => act(() => connectDrive({ fresh: true }), 'Connected to Google Drive')} />

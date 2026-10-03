@@ -9,7 +9,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'favicon-32.png', 'apple-touch-icon-180.png', 'moviemango-logo.svg'],
+      includeAssets: ['opensearch.xml', 'favicon.svg', 'favicon-32.png', 'apple-touch-icon-180.png', 'moviemango-logo.svg'],
       manifest: {
         name: 'MovieMango',
         short_name: 'MovieMango',
@@ -18,6 +18,10 @@ export default defineConfig({
         background_color: '#FFF8E1',
         display: 'standalone',
         start_url: '/',
+        shortcuts: [
+          { name: 'Search', url: '/#/search', icons: [{ src: 'moviemango-logo-192.png', sizes: '192x192' }] },
+          { name: 'Tonight’s picks', short_name: 'Tonight', url: '/#/tonight', icons: [{ src: 'moviemango-logo-192.png', sizes: '192x192' }] },
+        ],
         icons: [
           { src: 'moviemango-logo-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'moviemango-logo-512.png', sizes: '512x512', type: 'image/png' },
