@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockApis } from './fixtures';
+import { mockApis, mockGoogle, title } from './fixtures';
 
 const shot = (name: string, project: string) => `test-results/screens/${project}-${name}.png`;
 
@@ -7,6 +7,7 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await mockApis(page);
+  const drive = await mockGoogle(page);
   const p = info.project.name;
 
   await page.goto('/');
@@ -15,6 +16,13 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await page.screenshot({ path: shot('01-welcome', p), fullPage: true });
 
   await page.getByRole('button', { name: /Get started/ }).click();
+  await expect(page.getByRole('heading', { name: 'Keep your picks safe' })).toBeVisible();
+  await page.screenshot({ path: shot('01b-drive', p), fullPage: true });
+  await page.getByRole('button', { name: 'Sign in with Google' }).click();
+  await expect(page.getByText('tester@example.com')).toBeVisible();
+  await expect(page.getByText(/first backup is saved/)).toBeVisible();
+  await page.screenshot({ path: shot('01c-drive-connected', p), fullPage: true });
+  await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByText('Connect to TMDB')).toBeVisible();
   await page.getByLabel(/TMDB API Read Access Token/).fill('eyJ' + 'a'.repeat(80));
   await page.screenshot({ path: shot('02-tmdb', p), fullPage: true });
@@ -61,6 +69,10 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await page.screenshot({ path: shot('09-review', p) });
   await page.getByRole('button', { name: 'Close' }).click();
 
+  // Changes reach Drive: a debounced sync, or immediately via the header's sync button.
+  await page.getByRole('button', { name: /Sync|Synced/ }).first().click();
+  await expect.poll(() => (drive.file as { items?: { lists: string[] }[] } | null)?.items?.filter((i) => i.lists.includes('favourite')).length ?? 0).toBeGreaterThanOrEqual(10);
+
   await page.goto('/#/library');
   await expect(page.getByRole('heading', { name: 'Your library' })).toBeVisible();
   await page.screenshot({ path: shot('10-library', p), fullPage: true });
@@ -90,4 +102,34 @@ test('dark mode renders welcome and about', async ({ page }, info) => {
   await page.goto('/#/about');
   await expect(page.getByText(/This product uses the TMDB API/)).toBeVisible();
   await page.screenshot({ path: shot('15-dark-about', info.project.name), fullPage: true });
+});
+
+test('returning user restores everything from Google Drive on a new device', async ({ page }) => {
+  await mockApis(page);
+  const favs = [101, 102, 103, 104, 105, 106].map((id) => {
+    const t = title(id);
+    return { key: `movie:${id}`, tmdbId: id, type: 'movie', title: t.title, year: 2020, posterPath: t.poster_path, genreIds: t.genre_ids, originalLanguage: t.original_language, lists: ['favourite'], addedAt: 1, updatedAt: 1 };
+  });
+  await mockGoogle(page, {
+    app: 'MovieMango',
+    version: 1,
+    savedAt: 1,
+    items: favs,
+    lists: [{ id: 'l_1', name: 'Rainy day', emoji: '🌧️', createdAt: 1, updatedAt: 1 }],
+    settings: { tmdbToken: 'eyJ' + 'b'.repeat(80), languages: ['ta', 'ml'], services: ['netflix', 'sunnxt'], portrait: 'You love quiet Malayalam dramas.' },
+    settingsUpdatedAt: 5,
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: /Get started/ }).click();
+  await page.getByRole('button', { name: 'Sign in with Google' }).click();
+  await expect(page.getByText(/Welcome back! We brought over 6 titles and 1 list/)).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  // Key, languages and favourites came from Drive, so setup jumps straight to the AI step.
+  await expect(page.getByText('Meet your AI movie buff')).toBeVisible();
+  await page.getByRole('button', { name: /Show me tonight/ }).click();
+  await page.goto('/#/library');
+  await expect(page.getByText('You love quiet Malayalam dramas.')).toBeVisible();
+  await page.goto('/#/settings');
+  await expect(page.getByText(/Connected as tester@example.com/)).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Sun NXT' })).toHaveAttribute('aria-checked', 'true');
 });

@@ -10,5 +10,11 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
     { name: 'desktop', use: { viewport: { width: 1280, height: 900 } } },
   ],
-  webServer: { command: 'npx vite --port 5199 --strictPort', url: 'http://localhost:5199', reuseExistingServer: true, timeout: 120_000 },
+  webServer: {
+    command: 'npx vite --port 5199 --strictPort',
+    url: 'http://localhost:5199',
+    reuseExistingServer: false,
+    timeout: 120_000,
+    env: { VITE_GOOGLE_CLIENT_ID: 'e2e-test-client.apps.googleusercontent.com' },
+  },
 });

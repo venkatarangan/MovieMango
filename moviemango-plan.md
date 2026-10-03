@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–2 are the first round, §3–4 the second, §5–6 the third, and §7–8 the first build. **Later rounds replace earlier ones where they differ.** §6 is the current design; §8 records what has been built.
+> **Status:** §1–2 are the first round, §3–4 the second, §5–6 the third, §7–8 the first build, and §9–10 Google Drive sign-in. **Later rounds replace earlier ones where they differ.** §6 is the current design; §8 and §10 record what has been built.
 
 ---
 
@@ -723,3 +723,44 @@ Scaffold the **MovieMango** repo with v0.1. Needed from you:
 
 - **Verified:** type check, unit tests, production build, and browser smoke tests with mocked APIs. The live Mangoidiots WordPress API was checked with real requests (CORS, search, rating tags).
 - **Not verified yet:** live TMDB responses (no key during the build), live Gemini Nano, Qwen and Gemini cloud generation, and real OTT Play links.
+
+---
+
+## 9. Fifth-round prompt (verbatim)
+
+> Prompt the user in first run and get the google drive login. It has to be interactive with the user
+
+---
+
+## 10. Response: Google Drive sign-in and sync
+
+### 10.1 First-run flow (now 6 steps)
+
+Welcome → **Google Drive** → TMDB key → You (languages and services) → Tap 10 you love → AI engine.
+
+The Drive step:
+- Explains what's stored and where (one file in a hidden app folder in the user's own Drive; nothing else visible; no MovieMango server).
+- Shows a Google-branded **Sign in with Google** button. The Google popup (account chooser, then consent) opens only from that tap.
+- On success it shows the connected email and either "first backup saved", or, for a returning user, **"Welcome back! We brought over N titles and M lists"**.
+- **Returning users skip ahead**: when Drive brings back a TMDB key and favourites, setup jumps straight to the AI step. With only a key, it skips the key step.
+- **Not now** is allowed, but first shows a warning that the lists would live only in this browser.
+- Errors (popup blocked, window closed, permission unticked) are explained in plain words, with **Try again**.
+
+### 10.2 Sync behaviour
+
+- Google Identity Services token flow, browser-only. Scopes: `drive.appdata` + `openid email`, all non-sensitive.
+- One JSON file, `moviemango-sync.json`, in `appDataFolder`. It holds titles, lists (with tombstones), synced settings (languages, services, keys, Gemini model, toggles, taste portrait) and their timestamps. Per-device choices (AI engine, theme) aren't synced.
+- Merge is newest-wins per title, per list and for the settings block. An empty key never overwrites a saved one, so a new device picks up the user's keys.
+- Triggers: about 15 s after any change, when the tab is hidden, on app start (if the token is still valid), and **Sync now**.
+- Tokens last about 1 hour and are kept for the current tab only. When one expires, the header shows **Reconnect Drive**, which is one tap. A cloud icon shows synced / syncing / error.
+- Settings has a **Google Drive backup and sync** panel: connected account, last sync, Sync now, Sign in again, Disconnect (revokes the token).
+
+### 10.3 To test locally
+
+Create a Google OAuth **Web** client (steps in the README: enable the Drive API, consent screen with the three scopes, yourself as a test user, origins `http://localhost:5173` and `https://watch.mangoidiots.com`). Put the client ID in `.env.local` as `VITE_GOOGLE_CLIENT_ID`. Without it, the Drive step tells the user it isn't configured and continues.
+
+### 10.4 Verified
+
+- 3 new unit tests for the merge rules (35 in total).
+- Playwright tests with Google sign-in and Drive stubbed: first-run sign-in → first backup → 10 favourites reach Drive after a sync; and a returning user on a new device restores 6 titles, a custom list, the TMDB key, languages, services and the taste portrait, then lands on the AI step.
+- Not yet verified against real Google: that needs your OAuth client ID.

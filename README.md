@@ -11,7 +11,7 @@ Live at **https://watch.mangoidiots.com** (once deployed).
 
 ## Private, free and open
 
-- **Private.** Your lists, ratings, taste portrait and keys live only in your browser (IndexedDB). There is no MovieMango server and no account with us. On-device AI (Gemini Nano, Qwen) never sends your prompts anywhere.
+- **Private.** Your lists, ratings, taste portrait and keys live only in your browser (IndexedDB) and, if you connect it, a hidden app folder in your own Google Drive. There is no MovieMango server and no account with us. On-device AI (Gemini Nano, Qwen) never sends your prompts anywhere.
 - **Free.** No ads, no subscriptions. You bring your own free TMDB key, and optionally a free Google AI Studio key.
 - **Open.** MIT-licensed. Fork it, audit it, improve it.
 
@@ -32,9 +32,10 @@ Live at **https://watch.mangoidiots.com** (once deployed).
 - **Where to watch in India**: subscription, free and ad-supported offers (no rent/buy) on the top 10 services, with Play buttons that open the service's site or app.
 - **Mangoidiots reviews**: the Mangoidiots mango rating (Rotten / Raw / Ripe / Delicious), the review summary, an optional AI summary, and the full review in an in-app reader, plus a reviews shelf.
 - **Lists**: Favourites, Watchlist, Watched, plus up to 50 custom lists. Rate titles on the mango scale.
+- **Google Drive sync**: sign in during first run (or later in Settings) to back up to a hidden app folder in your own Drive and sync between devices. On a new device, signing in brings back your lists and keys and skips most of setup.
 - **Taste portrait**: a short, editable description of your taste that steers every pick.
 - **Share and export**: any title or list as text, through the share sheet on phones or as a `.txt` download elsewhere. Full JSON backup and restore.
-- **60-second setup**: detects India from the time zone and languages from the browser, then lets you tap 10 titles you love.
+- **60-second setup**: sign in with Google for backup and sync, then MovieMango detects India from the time zone and languages from the browser, and lets you tap 10 titles you love.
 - Installable PWA, light and dark themes, works offline for your lists.
 
 ## Getting a TMDB key
@@ -71,9 +72,25 @@ Copy `.env.example` to `.env.local`. Every value is public (it ships to the brow
 | Variable | Purpose |
 |---|---|
 | `VITE_GA_ID` | Google Analytics 4 measurement ID. **Leave empty to build with no analytics at all.** |
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID for Drive backup (coming in a later version). |
+| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID for Drive sign-in and sync. Without it, the Drive step is skipped. |
 
 Analytics, when enabled, sends only page views (with IDs stripped) and feature names. It never sends titles, lists, moods, ratings or keys, ad features are off, and users can opt out in Settings. To remove analytics from your fork, leave `VITE_GA_ID` empty, or delete `src/lib/analytics.ts` and its imports.
+
+### Set up Google sign-in (Drive sync)
+
+First run asks users to sign in with Google so their lists are backed up to, and synced through, their own Drive. To enable it, create an OAuth client once:
+
+1. Open the [Google Cloud console](https://console.cloud.google.com/) and create a project (for example "MovieMango").
+2. **APIs & Services → Library**: enable the **Google Drive API**.
+3. **Google Auth Platform** (OAuth consent screen):
+   - **Branding**: app name *MovieMango*, your support email, home page `https://watch.mangoidiots.com`, privacy policy `https://watch.mangoidiots.com/privacy.html`, authorised domain `mangoidiots.com`.
+   - **Data access**: add the scopes `.../auth/drive.appdata`, `openid` and `.../auth/userinfo.email`. All three are non-sensitive.
+   - **Audience**: *External*. While testing, add your own Google account under **Test users**.
+4. **Clients → Create client → Web application**. Under **Authorised JavaScript origins** add `http://localhost:5173`, `http://localhost:4173` and `https://watch.mangoidiots.com`. Redirect URIs aren't needed.
+5. Put the client ID in `.env.local` as `VITE_GOOGLE_CLIENT_ID=…apps.googleusercontent.com` and restart `npm run dev`. For deploys, set the Actions variable `GOOGLE_CLIENT_ID`.
+6. Before going public, **Audience → Publish app**. In testing mode only listed test users can sign in. Verify `mangoidiots.com` in Google Search Console for branding verification.
+
+How it behaves: the sign-in popup opens only when the user taps a button (first-run step, Settings, or the header's "Reconnect Drive" chip). Google access tokens last about an hour; while one is valid, changes sync about 15 seconds after an edit and when the tab is hidden. After it expires, the header shows **Reconnect Drive** and one tap resumes syncing. Merging is newest-wins per title, per list and for settings, so edits from your phone and computer combine.
 
 ## Deploy (GitHub Pages + watch.mangoidiots.com)
 
