@@ -35,3 +35,9 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 - Google OAuth client ID not created yet. Set the Actions variable `GOOGLE_CLIENT_ID`; see `docs/testing-locally.md`.
 - GA4 ID not supplied yet (Actions variable `GA_ID`).
 - Not built: TV episode tracking, "now on your services" alerts, image share cards, Tamil/Hindi UI, YouTube sync, more regions.
+
+## Backlog (build only when the owner asks)
+1. **Markdown import/export** of titles, per list or for all lists. Show a sample format on the page, plus tips for using an AI to convert exports from IMDb, Letterboxd, JustWatch, Plex and others.
+2. **MCP interface** so a local AI agent (PC/Mac only) can work with the app in that machine's browser. A web page can't host MCP itself; it needs a localhost bridge process or an extension. Opt-in, localhost-only.
+3. **Custom titles** (movies and TV) not in TMDB: English title, original-script title, description, director, actors, external URL.
+4. **Daily/weekend recommendation notifications.** There's no backend, so no web push. Use in-app reminders, the service-worker Notification API and Periodic Background Sync (installed Chrome PWA), and be clear about the limits.
