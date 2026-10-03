@@ -14,13 +14,16 @@ I love movies, and not just Indian and Hollywood ones; some of my favourites com
 
 ## What you can do
 
+- **Home**: search first, then three "Feeling lucky?" picks, what to continue watching, watchlist titles now on your services, and fresh movie and TV ideas.
 - **Tonight**: choose your time, mood and company and get a few picks, each with a reason. Or just type what you want.
 - **Where to watch**: subscription and free options on India's top 10 services.
 - **Lists**: Favourites, Watchlist, Watched and up to 50 of your own. Rate titles Rotten, Raw, Ripe or Delicious.
 - **Mangoidiots reviews**: read the review and rating inside the app.
+- **TV progress**: tick episodes or whole seasons and see what's next.
 - **Your own titles**: add films and shows that aren't on TMDB, like old TV serials or home videos.
 - **Share and import**: send a title or a list as text, export lists as Markdown, and import lists from Markdown, IMDb or Letterboxd (with an AI prompt for other apps).
-- **Your data, your Drive**: sign in with Google to back up and sync between devices.
+- **Your data, your Drive**: sign in with Google to back up and sync between devices, automatically or only when you tap.
+- **Search links**: `watch.mangoidiots.com/?q=dune` opens a search, and browsers can add MovieMango as a search engine.
 
 ## Getting started
 

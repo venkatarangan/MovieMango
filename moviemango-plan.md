@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -852,3 +852,32 @@ Full guide: `docs/testing-locally.md`.
 Recorded as a backlog, not built. It's in the **Backlog** section of `CLAUDE.md` and in Claude's project memory, to be done only when the owner asks. Notes to keep in mind:
 - MCP needs a small localhost bridge or an extension, because a web page can't host an MCP server.
 - Notifications without a backend are limited to in-app reminders and Periodic Background Sync on an installed Chrome PWA. There's no web push.
+
+---
+
+## 20. Twelfth-round prompts (verbatim)
+
+> write a windows batch file to copy the necessary files including docs, readme, local git, and excluding runtimes, frameworks, etc that may have been downloaded and can be obtained again to keep the size small. this is a backup batch file. source is the current folder, target is /mnt/c/dev/aimade/moviemango name as the current one. do a robocopy overwrite, whatever is in target can be deleted and only files here should exist.
+
+> add this batch file to gitignore, but the batch file should be part of its copy/backup
+
+> go ahead and implement google drive sync, keep it configurable. 2. the home screen once setup and all connected, should start with  promimently the search facility, a carousel of movies and tv shows in each carousel randomly pickedup and a combination of latest added watchlist, carousel of watched titles and on top a feature like "I am feeling lucky" to make a few suggestions with link to tonight full page.  3. the search should be easily accessible by a get parameter (is this doable when the app runs locally?) 4. let me know which from the pending list you want to implement now. any questions on the above ask me.
+
+Answers to Claude's questions (options chosen): Drive "configurable" = sync settings in the app; Home replaces the Search tab; "Feeling lucky" instant with no AI, carousels from the user's services; build Markdown import/export, the "now streaming" row, custom titles and TV episode tracking. Plus, verbatim:
+
+> overall launch an agent to ensure the app reduces the number of calls to tmdb to respect their usage restrictions, cache the data that was called during the session and even writes locally the last movies and tv shows called say to a maximum of 100 so that we dont' keep reading from tmdb.
+
+---
+
+## 21. Response: Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching
+
+- **Backup:** `backup.bat` (git-ignored, but copied by itself) wipes `C:\dev\aimade\moviemango` and runs `robocopy /MIR`, skipping `node_modules`, `dist`, test output and caches.
+- **Drive sync** was already built (§10). It stays dormant until the owner creates the OAuth client (`GOOGLE_CLIENT_ID`). New per-device switches: **Sync automatically** (off = only "Sync now", with an orange cloud while changes wait) and **Include my TMDB and Gemini keys**.
+- **Home** (`/`): search with live suggestions → **🎲 Feeling lucky?** (3 instant picks, Shuffle, link to Tonight) → Continue watching → From your watchlist, on your services ("New" for a week when a service adds a title) → Movies for you / Shows for you (random, on your services and languages) → Latest on your watchlist → Recently watched. Nav: Home · Tonight · Library · Reviews · Settings.
+- **Search links:** `/?q=dune` and `/#/search?q=dune`, also on localhost. OpenSearch (hash form, so the term stays in the browser) and PWA shortcuts.
+- **TV episodes:** a "Your progress" section on show pages; seasons load when opened; "watched up to here"; next episode; offer to mark an ended show watched.
+- **Custom titles:** negative `tmdbId`, never sent to TMDB; added from Search or the Library; own page with edit and delete.
+- **Markdown:** export per list or all lists; `/import` takes Markdown, plain lists or IMDb/Letterboxd CSV, matches on TMDB, and the user reviews before importing. Includes a prompt for converting other apps' exports with an AI.
+- **TMDB calls:** session memory cache; the last 100 titles kept on the device (LRU); streaming info refreshed in the background after 2 days; cached data served when TMDB is down or rate-limits; normalised cache keys. Tonight now looks closer at 20 candidates (was 28), and Home's lucky picks at 12.
+- Built by three parallel agents (caching, episodes, custom titles + Markdown) plus the main session; merged on `main`. Tests: 96 unit and 12 Playwright, all passing.
+

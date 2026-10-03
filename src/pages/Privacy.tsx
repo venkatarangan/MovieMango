@@ -13,7 +13,7 @@ export default function Privacy() {
 
       <Typography variant="h6" component="h2">What stays in your browser</Typography>
       <Typography>
-        Your lists, ratings, taste portrait, settings and API keys are stored in your browser (IndexedDB), and in your own Google Drive if you connect it. Clearing the site’s data, or “Erase everything” in Settings, removes them. Backup files you download never include your keys.
+        Your lists, ratings, taste portrait, settings and API keys are stored in your browser (IndexedDB), and in your own Google Drive if you connect it (you can keep keys out of Drive in Settings). Clearing the site’s data, or “Erase everything” in Settings, removes them. Backup files you download never include your keys.
       </Typography>
 
       <Typography variant="h6" component="h2">Who MovieMango talks to</Typography>
@@ -23,7 +23,7 @@ export default function Privacy() {
           <li><b>Wikipedia and Wikidata</b>: background summaries and, if you turn it on, today’s headlines.</li>
           <li><b>WordPress.com</b>: Mangoidiots reviews, if turned on.</li>
           <li><b>Google Gemini API</b>: only if you add your own key and use the cloud engine. Your prompt (mood, time, saved titles and candidates) goes to Google. On Google’s free tier, prompts may be used to improve Google’s products.</li>
-          <li><b>Google Drive</b>: only if you sign in with Google. Your lists, ratings, synced settings and API keys are saved to one file in a hidden app folder in <b>your own</b> Drive. MovieMango asks only for that folder (the drive.appdata permission) plus your email address to show which account is connected. It can’t see any of your other files. Disconnect in Settings; to delete the Drive copy, remove MovieMango under Drive → Settings → Manage apps.</li>
+          <li><b>Google Drive</b>: only if you sign in with Google. Your lists, ratings, synced settings and (unless you switch it off) API keys are saved to one file in a hidden app folder in <b>your own</b> Drive. MovieMango asks only for that folder (the drive.appdata permission) plus your email address to show which account is connected. It can’t see any of your other files. Disconnect in Settings; to delete the Drive copy, remove MovieMango under Drive → Settings → Manage apps.</li>
           <li><b>Hugging Face</b>: a one-time model download if you choose the Qwen engine.</li>
           <li><b>Streaming services</b>: only when you tap Play, which opens their site or app.</li>
         </ul>

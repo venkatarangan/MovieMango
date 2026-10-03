@@ -28,16 +28,20 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 - TMDB provider IDs change after mergers (e.g. Hotstar → JioHotstar); `src/lib/providers.ts` matches by name.
 - The WebLLM chunk (~6 MB) is lazy and excluded from the service-worker precache (`vite.config.ts`).
 - Playwright runs with `timezoneId: Asia/Kolkata` so India is detected.
+- Tests on `/mnt/c` (WSL) can stall (jsdom import takes minutes when the disk is busy). Run them from an rsync copy on the Linux filesystem with its own `npm ci`. Port 5199 must be free for Playwright.
+- Custom titles have a **negative `tmdbId`**: never send one to TMDB (`isCustom()`).
+- TMDB responses are cached hard (`src/api/http.ts`, `src/api/recent.ts`); cached objects are shared, so don't mutate them. Every new TMDB call should go through `tmdbGet`.
 - The Chrome Prompt API has been stable for web pages since Chrome 148. Check fast-moving facts like this before stating limits.
 
 ## Open items
 - Infra is complete (DNS, Pages, HTTPS). Social features (posts, reactions, friends) are out of scope; they would need a server.
 - Google OAuth client ID not created yet. Set the Actions variable `GOOGLE_CLIENT_ID`; see `docs/testing-locally.md`.
 - GA4 ID not supplied yet (Actions variable `GA_ID`).
-- Not built: TV episode tracking, "now on your services" alerts, image share cards, Tamil/Hindi UI, YouTube sync, more regions.
+- Built 2026-10-03: Home page, TV episode tracking, custom titles, Markdown import/export, Drive sync options, search links, TMDB caching. "Now on your services" is an in-app Home row only (no notifications).
+- Not built: image share cards, Tamil/Hindi UI, YouTube sync, more regions.
 
 ## Backlog (build only when the owner asks)
-1. **Markdown import/export** of titles, per list or for all lists. Show a sample format on the page, plus tips for using an AI to convert exports from IMDb, Letterboxd, JustWatch, Plex and others.
+1. ~~Markdown import/export~~: built (`/import`, `src/lib/markdown.ts`).
 2. **MCP interface** so a local AI agent (PC/Mac only) can work with the app in that machine's browser. A web page can't host MCP itself; it needs a localhost bridge process or an extension. Opt-in, localhost-only.
-3. **Custom titles** (movies and TV) not in TMDB: English title, original-script title, description, director, actors, external URL.
+3. ~~Custom titles~~: built (`src/lib/custom.ts`, `CustomTitleView`).
 4. **Daily/weekend recommendation notifications.** There's no backend, so no web push. Use in-app reminders, the service-worker Notification API and Periodic Background Sync (installed Chrome PWA), and be clear about the limits.
