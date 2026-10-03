@@ -77,7 +77,8 @@ export interface TonightResult {
 export type Stage = (text: string) => void;
 
 const PICK_COUNT = 6;
-const ENRICH_COUNT = 28;
+/** Details calls per cold run are the main TMDB cost, so keep this modest. */
+const ENRICH_COUNT = 20;
 const RERANK_POOL = 14;
 
 const GENRE_BY_NAME = new Map(
@@ -170,6 +171,7 @@ export async function planTonight(
   items: UserItem[],
   engine: AiEngine | null,
   stage: Stage = () => {},
+  opts: { enrich?: number } = {},
 ): Promise<TonightResult> {
   let input: TonightInput = { ...rawInput, want: rawInput.want ?? (rawInput.moodNow ? DEFAULT_WANT[rawInput.moodNow] : undefined) };
   let aiError: string | undefined;
@@ -279,8 +281,9 @@ export async function planTonight(
     return list.sort((a, b) => b.score - a.score);
   };
 
-  stage(`Looking closer at ${Math.min(ENRICH_COUNT, candidates.length)} titles…`);
-  const shortlist = scoreAll(candidates).slice(0, ENRICH_COUNT);
+  const enrich = opts.enrich ?? ENRICH_COUNT;
+  stage(`Looking closer at ${Math.min(enrich, candidates.length)} titles…`);
+  const shortlist = scoreAll(candidates).slice(0, enrich);
   await pLimit(shortlist, 6, async (c) => {
     const d = await getDetails(c.snap.type, c.snap.tmdbId);
     c.snap = { ...c.snap, ...snapshotFromDetails(d, c.snap.type) };

@@ -50,10 +50,10 @@ export async function randomShelf(type: MediaType, settings: Settings, seed: num
   return shuffle(res.results.filter((r) => r.poster_path).map((r) => snapshotFromList(r, type)), seed);
 }
 
-/** Tonight's pipeline without AI, with time-of-day defaults: instant "feeling lucky" picks. */
+/** Tonight's pipeline without AI, with time-of-day defaults and a smaller shortlist: instant "feeling lucky" picks. */
 export function luckyPicks(settings: Settings, items: UserItem[], round = 0): Promise<TonightResult> {
   const input: TonightInput = { minutes: defaultMinutes(), discovery: round % 2 ? 'surprise' : 'new', audience: 'solo', type: 'either' };
-  return planTonight(input, settings, items, null);
+  return planTonight(input, settings, items, null, undefined, { enrich: 12 });
 }
 
 export interface StreamingNow {
