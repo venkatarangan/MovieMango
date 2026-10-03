@@ -13,6 +13,7 @@ npm run dev        # http://localhost:5173
 
 **Tips**
 - Redo first run: Settings → Erase everything.
+- Search links work locally too: `http://localhost:5173/?q=dune` or `http://localhost:5173/#/search?q=dune`.
 - Production build with the service worker: `npm run build && npm run preview` (port 4173).
 - Tests: `npm test`, and `npm run e2e` (mocks every API; screenshots go to `test-results/screens/`).
 

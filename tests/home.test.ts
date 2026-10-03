@@ -1,33 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getDetails } from '../src/api/tmdb';
 import { db } from '../src/db';
 import { DEFAULT_SETTINGS, resetSettingsCache, saveSettings, type Settings } from '../src/db/settings';
 import type { UserItem } from '../src/lib/types';
 import { shuffle, streamingNow } from '../src/reco/home';
 
-// Which providers carry each title; tests change it between checks.
+// Which providers carry each title; tests change it between checks. Details come straight from here,
+// so these tests cover the Home logic, not the TMDB cache (tests/cache.test.ts does that).
 let carriers: Record<number, string[]> = {};
 
-function fakeFetch(url: string): Response {
-  const u = new URL(url);
-  const json = (b: unknown) => new Response(JSON.stringify(b), { status: 200, headers: { 'content-type': 'application/json' } });
-  const m = u.pathname.match(/\/3\/movie\/(-?\d+)$/);
-  if (!m) return new Response('not found', { status: 404 });
-  const id = Number(m[1]);
-  return json({ id, title: `T${id}`, genres: [], 'watch/providers': { results: { IN: { flatrate: (carriers[id] ?? []).map((p, i) => ({ provider_id: 900 + i, provider_name: p, logo_path: '' })) } } } });
-}
-
-// Forget fetched titles (memory, cache rows and the recent-titles store) so the next check sees new providers.
-const forget = async () => {
-  await db.cache.clear();
-  await db.titles.clear();
-};
+vi.mock('../src/api/tmdb', async (original) => ({
+  ...(await original<typeof import('../src/api/tmdb')>()),
+  getDetails: vi.fn(async (_type: string, id: number) => ({
+    id,
+    title: `T${id}`,
+    genres: [],
+    'watch/providers': { results: { IN: { flatrate: (carriers[id] ?? []).map((p, i) => ({ provider_id: 900 + i, provider_name: p, logo_path: '' })) } } },
+  })),
+}));
 
 const settings: Settings = { ...DEFAULT_SETTINGS, onboarded: true, tmdbToken: 'x'.repeat(32), services: ['netflix', 'prime'] };
 const item = (id: number, lists = ['watchlist']): UserItem => ({ key: `movie:${id}`, tmdbId: id, type: 'movie', title: `T${id}`, genreIds: [], lists, addedAt: 0, updatedAt: id });
 
 describe('Home shelves', () => {
   beforeEach(async () => {
-    vi.stubGlobal('fetch', vi.fn(async (url: string) => fakeFetch(url)));
+    vi.mocked(getDetails).mockClear();
     await db.delete();
     await db.open();
     resetSettingsCache();
@@ -46,24 +43,21 @@ describe('Home shelves', () => {
     const items = [item(1), item(2), item(3), item(4, ['watched'])];
     const first = await streamingNow(items, settings, 1_000);
     expect(first.map((s) => [s.item.key, s.isNew])).toEqual([['movie:1', false]]);
+    expect(getDetails).toHaveBeenCalledTimes(3); // watched titles aren't checked
 
     carriers = { 1: ['Netflix'], 2: ['Some Other'], 3: ['Amazon Prime Video'] };
-    await forget();
     const second = await streamingNow(items, settings, 2_000);
     expect(second.map((s) => [s.item.key, s.isNew])).toEqual([
       ['movie:3', true],
       ['movie:1', false],
     ]);
     // Still "new" a few days later, but not after a week.
-    await forget();
     expect((await streamingNow(items, settings, 2_000 + 3 * 86_400_000)).find((s) => s.item.key === 'movie:3')?.isNew).toBe(true);
-    await forget();
     expect((await streamingNow(items, settings, 2_000 + 8 * 86_400_000)).find((s) => s.item.key === 'movie:3')?.isNew).toBe(false);
   });
 
   it('never asks TMDB about custom titles', async () => {
-    carriers = {};
     await streamingNow([item(-5)], settings);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(getDetails).not.toHaveBeenCalled();
   });
 });
