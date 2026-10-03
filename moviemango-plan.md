@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–2 are the first round, §3–4 the second, §5–6 the third, §7–8 the first build, and §9–10 Google Drive sign-in. **Later rounds replace earlier ones where they differ.** §6 is the current design; §8 and §10 record what has been built.
+> **Status:** §1–2 are the first round, §3–4 the second, §5–6 the third, §7–8 the first build, §9–10 Google Drive sign-in, and §11–12 local testing and docs. **Later rounds replace earlier ones where they differ.** §6 is the current design; §8 and §10 record what has been built.
 
 ---
 
@@ -764,3 +764,34 @@ Create a Google OAuth **Web** client (steps in the README: enable the Drive API,
 - 3 new unit tests for the merge rules (35 in total).
 - Playwright tests with Google sign-in and Drive stubbed: first-run sign-in → first backup → 10 favourites reach Drive after a sync; and a returning user on a new device restores 6 titles, a custom list, the TMDB key, languages, services and the taste portrait, then lands on the AI step.
 - Not yet verified against real Google: that needs your OAuth client ID.
+
+---
+
+## 11. Sixth- and seventh-round prompts (verbatim)
+
+> can I test the locally app without google oauth capabilities
+
+> commit everything we did here in this session and write markdowns
+
+---
+
+## 12. Response: local testing and documentation
+
+**Testing without Google OAuth: yes.** Drive sign-in switches on only when `VITE_GOOGLE_CLIENT_ID` is set. Without it:
+- First-run step 2 says Drive sync isn't configured and shows **Continue**.
+- The header has no sync icon, and Settings says Drive isn't configured (file backup/restore still works).
+- Everything else works. A TMDB key is still needed. For AI, use Chrome 148+ (Gemini Nano), a Google AI Studio key, WebGPU (Qwen), or Basic mode.
+
+Full guide: `docs/testing-locally.md`.
+
+**Docs written this round:**
+
+| File | Contents |
+|---|---|
+| `docs/testing-locally.md` | Running without Google sign-in, getting a TMDB key, AI options, tips, enabling Google sign-in later, automated tests |
+| `docs/architecture.md` | System overview, source layout, data model, Tonight pipeline, AI engine choice, Drive sync, caching and rate limits, privacy-relevant choices |
+| `CHANGELOG.md` | 0.1.0 and the unreleased Drive sign-in work |
+| `docs/original-prompt.txt` | The session's original prompt (was `input.txt`) |
+| `README.md` | Links to the docs above |
+
+**Housekeeping:** `tsconfig.tsbuildinfo` was removed from git and is now ignored.
