@@ -49,12 +49,31 @@ export interface TmdbRegionProviders {
   buy?: TmdbProvider[];
 }
 
+export interface TmdbEpisodeRef {
+  season_number: number;
+  episode_number: number;
+  air_date?: string | null;
+  name?: string;
+}
+
+export interface TmdbEpisode {
+  episode_number: number;
+  name: string;
+  air_date?: string | null;
+  runtime?: number | null;
+  overview?: string;
+  still_path?: string | null;
+}
+
 export interface TmdbDetails extends TmdbListItem {
   genres: { id: number; name: string }[];
   runtime?: number | null;
   episode_run_time?: number[];
   number_of_seasons?: number;
   number_of_episodes?: number;
+  seasons?: { season_number: number; episode_count: number; name: string; air_date?: string | null; poster_path?: string | null }[];
+  last_episode_to_air?: TmdbEpisodeRef | null;
+  next_episode_to_air?: TmdbEpisodeRef | null;
   tagline?: string;
   status?: string;
   spoken_languages?: { iso_639_1: string; english_name: string }[];
@@ -139,7 +158,7 @@ export function getWatchProviderCatalogue(type: MediaType, region: string) {
 }
 
 export function getSeason(tvId: number, season: number) {
-  return tmdbGet<{ episodes: { episode_number: number; name: string; air_date?: string; runtime?: number }[] }>(
+  return tmdbGet<{ episodes: TmdbEpisode[] }>(
     `/tv/${tvId}/season/${season}`,
     { language: TMDB_LANGUAGE },
     DAY,

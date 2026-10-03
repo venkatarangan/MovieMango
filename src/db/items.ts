@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './index';
+import { computeNextEpisode, withEpisode, withSeason, withSeenUpTo, type EpisodesSeen, type SeasonInfo } from '../lib/episodes';
 import { itemKey, MAX_CUSTOM_LISTS, type CustomList, type MangoRating, type TitleSnapshot, type UserItem } from '../lib/types';
 
 const now = () => Date.now();
@@ -57,6 +58,39 @@ export async function markNotTonight(snapshot: TitleSnapshot, days = 7) {
   });
 }
 
+/** Saves episode progress and recomputes nextEpisode. Lists are left alone. */
+function setEpisodes(snapshot: TitleSnapshot, update: (seen: EpisodesSeen | undefined) => EpisodesSeen, seasons?: SeasonInfo[]) {
+  return upsert(snapshot, (item) => {
+    const seen = update(item.episodesSeen);
+    item.episodesSeen = Object.keys(seen).length ? seen : undefined;
+    item.nextEpisode = item.episodesSeen ? computeNextEpisode(item.episodesSeen, seasons) : undefined;
+  });
+}
+
+/** `seasons` is the show's season list (aired counts), used to work out the next episode. */
+export async function toggleEpisode(snapshot: TitleSnapshot, season: number, episode: number, on?: boolean, seasons?: SeasonInfo[]) {
+  return setEpisodes(snapshot, (seen) => withEpisode(seen, season, episode, on ?? !seen?.[String(season)]?.includes(episode)), seasons);
+}
+
+export async function setSeasonSeen(snapshot: TitleSnapshot, season: number, episodeCount: number, on: boolean, seasons?: SeasonInfo[]) {
+  return setEpisodes(snapshot, (seen) => withSeason(seen, season, episodeCount, on), seasons);
+}
+
+/** Marks this episode and everything before it, including earlier seasons. */
+export async function markSeenUpTo(snapshot: TitleSnapshot, season: number, episode: number, seasons?: SeasonInfo[]) {
+  return setEpisodes(snapshot, (seen) => withSeenUpTo(seen, season, episode, seasons), seasons);
+}
+
+/** Recomputes a stale nextEpisode (new episodes aired, or a name is now known). Writes only when it changed. */
+export async function refreshNextEpisode(snapshot: TitleSnapshot, seasons: SeasonInfo[]) {
+  const item = await db.items.get(itemKey(snapshot.type, snapshot.tmdbId));
+  if (!item?.episodesSeen) return;
+  const next = computeNextEpisode(item.episodesSeen, seasons);
+  const cur = item.nextEpisode;
+  const same = next?.season === cur?.season && next?.episode === cur?.episode && (!next?.name || next.name === cur?.name);
+  if (!same) await setEpisodes(snapshot, (seen) => seen ?? {}, seasons);
+}
+
 export async function createList(name: string, emoji?: string): Promise<CustomList> {
   const active = await db.lists.filter((l) => !l.deleted).count();
   if (active >= MAX_CUSTOM_LISTS) throw new Error(`You can have up to ${MAX_CUSTOM_LISTS} custom lists.`);
@@ -95,6 +129,14 @@ export function useCustomLists() {
 
 export function useAllItems() {
   return useLiveQuery(() => db.items.toArray());
+}
+
+/** TV shows with some episodes seen, not finished or hidden; most recently updated first. */
+export function useShowsInProgress() {
+  return useLiveQuery(async () => {
+    const items = await db.items.where('type').equals('tv').filter((i) => !!i.episodesSeen && Object.keys(i.episodesSeen).length > 0 && !i.lists.includes('watched') && i.feedback !== 'never').toArray();
+    return items.sort((a, b) => b.updatedAt - a.updatedAt);
+  });
 }
 
 export const listLabel: Record<string, string> = { favourite: 'Favourites', watchlist: 'Watchlist', watched: 'Watched' };
