@@ -53,6 +53,8 @@ Open [aistudio.google.com/apikey](https://aistudio.google.com/apikey), sign in, 
 
 ## Run it locally
 
+See [docs/testing-locally.md](docs/testing-locally.md) for the full guide, including testing without Google sign-in. Architecture notes: [docs/architecture.md](docs/architecture.md). Design history: [moviemango-plan.md](moviemango-plan.md). Changes: [CHANGELOG.md](CHANGELOG.md).
+
 Requires Node.js 22+.
 
 ```bash
