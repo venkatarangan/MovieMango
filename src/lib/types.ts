@@ -44,6 +44,10 @@ export interface UserItem extends TitleSnapshot {
   feedback?: 'never';
   notTonightUntil?: number;
   watchedAt?: number;
+  /** TV only: watched episode numbers per season number, e.g. { "1": [1,2,3], "2": [1] }. */
+  episodesSeen?: Record<string, number[]>;
+  /** TV only: the next unwatched episode, worked out when progress changes; null when caught up. */
+  nextEpisode?: { season: number; episode: number; name?: string } | null;
   addedAt: number;
   updatedAt: number;
 }

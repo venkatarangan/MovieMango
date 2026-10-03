@@ -13,6 +13,7 @@ import { summariseReview } from '../ai/tasks';
 import { ErrorNote, SectionTitle } from '../components/common';
 import CustomTitleView from '../components/CustomTitleView';
 import { useEngine } from '../components/EngineContext';
+import EpisodeTracker from '../components/EpisodeTracker';
 import ListActions from '../components/ListActions';
 import { MangoBadge, MangoRatingPicker } from '../components/Mango';
 import PosterCard, { Poster, PosterRow } from '../components/PosterCard';
@@ -189,6 +190,8 @@ function TmdbTitle() {
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
         Rating a title also marks it as watched, and teaches MovieMango your taste.
       </Typography>
+
+      {type === 'tv' && <EpisodeTracker snap={snap} show={d} />}
 
       {settings.useMangoidiots && review.data && (
         <>

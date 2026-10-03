@@ -22,7 +22,32 @@ export const title = (id: number) => {
   };
 };
 
-const page = (ids: number[]) => ({ page: 1, total_pages: 1, total_results: ids.length, results: ids.map(title) });
+/** TV shows: Specials + two seasons of 6. Odd ids are still airing (S2 E5 and E6 air in 2030); even ids have ended. */
+const EPISODE_NAMES = ['Pilot', 'The Long Way Home', 'Monsoon', 'Second Chances', 'Night Shift', 'The Wedding'];
+const airing = (id: number) => id % 2 === 1;
+const tvSeasons = (id: number) => ({
+  status: airing(id) ? 'Returning Series' : 'Ended',
+  seasons: [
+    { season_number: 0, episode_count: 2, name: 'Specials', air_date: '2024-01-01', poster_path: null },
+    { season_number: 1, episode_count: 6, name: 'Season 1', air_date: '2024-01-05', poster_path: null },
+    { season_number: 2, episode_count: 6, name: 'Season 2', air_date: '2025-02-07', poster_path: null },
+  ],
+  last_episode_to_air: { season_number: 2, episode_number: airing(id) ? 4 : 6, air_date: '2025-03-01', name: 'Last aired' },
+  next_episode_to_air: airing(id) ? { season_number: 2, episode_number: 5, air_date: '2030-10-12', name: EPISODE_NAMES[4] } : null,
+});
+const season = (id: number, n: number) => ({
+  season_number: n,
+  episodes: Array.from({ length: n === 0 ? 2 : 6 }, (_, i) => ({
+    episode_number: i + 1,
+    name: n === 0 ? `Special ${i + 1}` : EPISODE_NAMES[i],
+    air_date: n === 2 && airing(id) && i >= 4 ? `2030-10-${12 + (i - 4) * 7}` : `${2023 + n}-0${n + 1}-${String(1 + i * 4).padStart(2, '0')}`,
+    runtime: 42,
+    overview: '',
+    still_path: null,
+  })),
+});
+
+const page = (ids: number[]) =>({ page: 1, total_pages: 1, total_results: ids.length, results: ids.map(title) });
 
 function tmdb(path: string, search: URLSearchParams) {
   if (path === '/configuration') return { images: {} };
@@ -46,6 +71,8 @@ function tmdb(path: string, search: URLSearchParams) {
   if (path.startsWith('/search') && search.get('query')?.includes('zzz')) return page([]);
   if (path.startsWith('/trending') || path.startsWith('/search')) return { ...page([101, 102, 103, 104, 105, 106, 107, 108]), results: page([101, 102, 103, 104, 105, 106, 107, 108]).results.map((r) => ({ ...r, media_type: 'movie' })) };
   if (path.endsWith('/recommendations')) return page([150, 151, 152, 153]);
+  const sm = path.match(/^\/tv\/(\d+)\/season\/(\d+)$/);
+  if (sm) return season(Number(sm[1]), Number(sm[2]));
   const m = path.match(/^\/(movie|tv)\/(\d+)$/);
   if (m) {
     const id = Number(m[2]);
@@ -60,6 +87,7 @@ function tmdb(path: string, search: URLSearchParams) {
       name: m[1] === 'tv' ? t.title : undefined,
       first_air_date: m[1] === 'tv' ? t.release_date : undefined,
       number_of_seasons: m[1] === 'tv' ? 2 : undefined,
+      ...(m[1] === 'tv' ? tvSeasons(id) : {}),
       genres: t.genre_ids.map((g) => ({ id: g, name: { 53: 'Thriller', 80: 'Crime', 35: 'Comedy', 10749: 'Romance', 18: 'Drama', 28: 'Action', 12: 'Adventure', 10751: 'Family', 16: 'Animation', 9648: 'Mystery', 878: 'Science Fiction', 99: 'Documentary' }[g] ?? 'Drama' })),
       runtime: m[1] === 'movie' ? 95 + (id % 40) : undefined,
       episode_run_time: m[1] === 'tv' ? [42] : undefined,

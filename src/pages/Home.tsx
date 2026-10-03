@@ -10,9 +10,10 @@ import { img, mediaTypeOf, searchMulti, snapshotFromList, type TmdbListItem } fr
 import { ErrorNote, SectionTitle } from '../components/common';
 import PosterCard, { Poster, PosterRow } from '../components/PosterCard';
 import { PlayButtons } from '../components/WhereToWatch';
-import { useAllItems } from '../db/items';
+import { useAllItems, useShowsInProgress } from '../db/items';
 import { useSettings, type Settings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
+import { episodeLabel } from '../lib/episodes';
 import { formatRuntime } from '../lib/format';
 import { languageName } from '../lib/languages';
 import type { MediaType, TitleSnapshot, UserItem } from '../lib/types';
@@ -273,6 +274,18 @@ function StreamingShelf({ settings, items }: { settings: Settings; items: UserIt
   );
 }
 
+function ContinueWatching() {
+  const shows = useShowsInProgress();
+  const list = [...(shows ?? [])].sort((a, b) => Number(!a.nextEpisode) - Number(!b.nextEpisode)).slice(0, SHELF_SIZE);
+  return (
+    <Shelf title="Continue watching" empty={!list.length}>
+      {list.map((i) => (
+        <PosterCard key={i.key} snap={i} subtitle={i.nextEpisode ? `Next: ${episodeLabel(i.nextEpisode)}` : 'All caught up'} />
+      ))}
+    </Shelf>
+  );
+}
+
 export default function Home() {
   const settings = useSettings();
   const items = useAllItems();
@@ -299,6 +312,7 @@ export default function Home() {
 
       <FeelingLucky settings={settings} items={items} />
 
+      <ContinueWatching />
       <StreamingShelf settings={settings} items={items} />
       <RandomShelf type="movie" settings={settings} hidden={hidden} seed={seed} />
       <RandomShelf type="tv" settings={settings} hidden={hidden} seed={seed + 1} />
