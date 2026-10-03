@@ -11,6 +11,7 @@ import { certificationOf, getDetails, img, mediaTypeOf, snapshotFromDetails, sna
 import { wikiSummaryForWikidata } from '../api/wiki';
 import { summariseReview } from '../ai/tasks';
 import { ErrorNote, SectionTitle } from '../components/common';
+import CustomTitleView from '../components/CustomTitleView';
 import { useEngine } from '../components/EngineContext';
 import ListActions from '../components/ListActions';
 import { MangoBadge, MangoRatingPicker } from '../components/Mango';
@@ -29,7 +30,13 @@ import type { MediaType } from '../lib/types';
 
 const stripTags = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/gi, (m) => ({ '&nbsp;': ' ', '&amp;': '&', '&#8217;': '’', '&#8216;': '‘', '&#8220;': '“', '&#8221;': '”', '&#8230;': '…', '&hellip;': '…' })[m] ?? ' ').replace(/\s+/g, ' ').trim();
 
+/** Custom titles (negative ids) never touch TMDB. */
 export default function Title() {
+  const { type, id } = useParams();
+  return Number(id) < 0 ? <CustomTitleView type={type === 'tv' ? 'tv' : 'movie'} id={Number(id)} /> : <TmdbTitle />;
+}
+
+function TmdbTitle() {
   const { type: rawType, id: rawId } = useParams();
   const type = (rawType === 'tv' ? 'tv' : 'movie') as MediaType;
   const id = Number(rawId);

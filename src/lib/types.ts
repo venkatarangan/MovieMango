@@ -21,7 +21,20 @@ export interface TitleSnapshot {
   voteCount?: number;
   keywordIds?: number[];
   peopleIds?: number[];
+  /** Only on custom titles (negative tmdbId): details the user typed in. */
+  custom?: CustomInfo;
 }
+
+/** A title the user added that isn't in TMDB. It's a normal item whose tmdbId is negative. */
+export interface CustomInfo {
+  originalTitle?: string; // title in its own script (Unicode), e.g. Tamil
+  overview?: string;
+  director?: string;
+  cast?: string[];
+  url?: string; // external page for more information
+}
+
+export const isCustom = (t: { tmdbId: number }) => t.tmdbId < 0;
 
 export interface UserItem extends TitleSnapshot {
   key: string;

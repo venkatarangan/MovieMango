@@ -18,7 +18,8 @@ I love movies, and not just Indian and Hollywood ones; some of my favourites com
 - **Where to watch**: subscription and free options on India's top 10 services.
 - **Lists**: Favourites, Watchlist, Watched and up to 50 of your own. Rate titles Rotten, Raw, Ripe or Delicious.
 - **Mangoidiots reviews**: read the review and rating inside the app.
-- **Share**: send a title or a list as text, or save it as a file.
+- **Your own titles**: add films and shows that aren't on TMDB, like old TV serials or home videos.
+- **Share and import**: send a title or a list as text, export lists as Markdown, and import lists from Markdown, IMDb or Letterboxd (with an AI prompt for other apps).
 - **Your data, your Drive**: sign in with Google to back up and sync between devices.
 
 ## Getting started

@@ -8,6 +8,7 @@ import PosterCard, { PosterGrid } from '../components/PosterCard';
 import ShareButton from '../components/ShareButton';
 import { deleteList, renameList, useCustomLists, useListItems } from '../db/items';
 import { listToText, safeFilename } from '../lib/exportText';
+import { listsToMarkdown } from '../lib/markdown';
 
 export default function ListPage() {
   const { listId = '' } = useParams();
@@ -29,7 +30,7 @@ export default function ListPage() {
         <Typography variant="h4" component="h1" sx={{ flex: 1 }}>
           {label}
         </Typography>
-        <ShareButton title={list.name} filename={safeFilename(list.name)} build={() => listToText(label, items)} what="list" />
+        <ShareButton title={list.name} filename={safeFilename(list.name)} build={() => listToText(label, items)} markdown={() => listsToMarkdown([{ name: label, items }])} what="list" />
         <Button color="inherit" startIcon={<EditRoundedIcon />} onClick={() => { setName(list.name); setEmoji(list.emoji ?? ''); setEditing(true); }}>
           Rename
         </Button>

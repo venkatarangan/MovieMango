@@ -1,10 +1,12 @@
+import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import { Box, CircularProgress, InputAdornment, TextField, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, InputAdornment, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import { mediaTypeOf, searchMulti, snapshotFromList, trending } from '../api/tmdb';
 import { EmptyState, ErrorNote, SectionTitle } from '../components/common';
+import CustomTitleDialog from '../components/CustomTitleDialog';
 import PosterCard, { PosterGrid } from '../components/PosterCard';
 import { trackEvent } from '../lib/analytics';
 import { languageName } from '../lib/languages';
@@ -22,6 +24,8 @@ export default function Search() {
   const [params, setParams] = useSearchParams();
   const [text, setText] = useState(params.get('q') ?? '');
   const query = useDebounced(text.trim(), 350);
+  const [adding, setAdding] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setParams(query ? { q: query } : {}, { replace: true });
@@ -59,6 +63,11 @@ export default function Search() {
       {query && results.isSuccess && list.length === 0 ? (
         <EmptyState emoji="🔍" title="No matches">
           Try the original title, or check the spelling.
+          <Box sx={{ mt: 2 }}>
+            <Button variant="outlined" startIcon={<AddRoundedIcon />} onClick={() => setAdding(true)}>
+              Add your own title
+            </Button>
+          </Box>
         </EmptyState>
       ) : (
         <PosterGrid>
@@ -79,6 +88,14 @@ export default function Search() {
           Trending data from TMDB.
         </Typography>
       )}
+      {query && results.isSuccess && list.length > 0 && (
+        <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Button startIcon={<AddRoundedIcon />} onClick={() => setAdding(true)}>
+            Can’t find it? Add your own title
+          </Button>
+        </Box>
+      )}
+      <CustomTitleDialog open={adding} onClose={() => setAdding(false)} initialTitle={query} onSaved={(s) => navigate(`/title/${s.type}/${s.tmdbId}`)} />
     </Box>
   );
 }
