@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -880,4 +880,16 @@ Answers to Claude's questions (options chosen): Drive "configurable" = sync sett
 - **Markdown:** export per list or all lists; `/import` takes Markdown, plain lists or IMDb/Letterboxd CSV, matches on TMDB, and the user reviews before importing. Includes a prompt for converting other apps' exports with an AI.
 - **TMDB calls:** session memory cache; the last 100 titles kept on the device (LRU); streaming info refreshed in the background after 2 days; cached data served when TMDB is down or rate-limits; normalised cache keys. Tonight now looks closer at 20 candidates (was 28), and Home's lucky picks at 12.
 - Built by three parallel agents (caching, episodes, custom titles + Markdown) plus the main session; merged on `main`. Tests: 96 unit and 12 Playwright, all passing.
+
+---
+
+## 22. Thirteenth-round prompt (verbatim) and response
+
+> once things are done, checked, update the docs, app texts, about and then please commit them all. write the claude.md and markdowns.
+
+- **Version 0.2.0** (`package.json`, `src/lib/appInfo.ts`, `CHANGELOG.md`).
+- **About:** a short "What else it does" list (Home, lists and TV progress, your own titles, import/export, sync); the Open card mentions Markdown export.
+- **Privacy** (in-app and `privacy.html`): TMDB also gets episode lists and imported titles; recently viewed titles are kept in the browser; keys can be kept out of Drive.
+- **Docs:** README features, `docs/architecture.md` (code map, routes, Home, search links, sync options, caching, custom titles, Markdown, episodes), `docs/testing-locally.md` (search links locally), `CLAUDE.md` (built items, backlog status, gotchas: tests on `/mnt/c`, negative ids, shared cached objects).
+- **Checked:** typecheck, production build, 96 unit tests and 12 Playwright tests (phone and desktop), screenshots reviewed.
 

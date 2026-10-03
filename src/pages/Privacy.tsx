@@ -19,7 +19,7 @@ export default function Privacy() {
       <Typography variant="h6" component="h2">Who MovieMango talks to</Typography>
       <Typography component="div">
         <ul>
-          <li><b>TMDB</b>: searches and title details, using your own key.</li>
+          <li><b>TMDB</b>: searches, title details, episode lists and the titles you import, using your own key. Titles you looked at recently are kept in your browser, so MovieMango asks TMDB less often.</li>
           <li><b>Wikipedia and Wikidata</b>: background summaries and, if you turn it on, today’s headlines.</li>
           <li><b>WordPress.com</b>: Mangoidiots reviews, if turned on.</li>
           <li><b>Google Gemini API</b>: only if you add your own key and use the cloud engine. Your prompt (mood, time, saved titles and candidates) goes to Google. On Google’s free tier, prompts may be used to improve Google’s products.</li>

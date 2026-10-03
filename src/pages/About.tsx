@@ -12,7 +12,7 @@ const ext = (href: string, text: string) => (
 const PILLARS = [
   { emoji: '🔒', title: 'Private', text: 'Your lists and ratings stay in your browser and, if you connect it, your own Google Drive. No MovieMango server, no account with us.' },
   { emoji: '💸', title: 'Free', text: 'No ads, no subscription. You use your own free TMDB key, and optionally a free Google AI key.' },
-  { emoji: '🔓', title: 'Open', text: 'MIT-licensed source code on GitHub. Your data is a plain file you own.' },
+  { emoji: '🔓', title: 'Open', text: 'MIT-licensed source code on GitHub. Your data is a plain file you own, and every list exports as Markdown.' },
 ];
 
 export default function About() {
@@ -67,7 +67,17 @@ export default function About() {
         <li>It finds titles streaming on your services in India, in your languages, and an AI picks the best few for your taste, explaining why.</li>
         <li>Tap Play to open the title on Netflix, Prime Video, JioHotstar and more.</li>
       </Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+      <Typography variant="h5" component="h2" sx={{ mt: 4, mb: 1 }}>
+        What else it does
+      </Typography>
+      <Box component="ul" sx={{ pl: 2.5, my: 0, '& li': { mb: 0.75 } }}>
+        <li><b>Home</b>: search, three “Feeling lucky?” picks, shows to continue, and watchlist titles that are now on your services.</li>
+        <li><b>Lists</b>: Favourites, Watchlist, Watched and up to 50 of your own, with mango ratings and TV episode progress.</li>
+        <li><b>Your own titles</b>: add films and shows that aren’t on TMDB, like old serials or home videos.</li>
+        <li><b>Import and export</b>: bring lists in from Markdown, IMDb or Letterboxd, and take them out as Markdown any time.</li>
+        <li><b>Sync</b>: back up to your own Google Drive and use it on your phone and computer.</li>
+      </Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
         The AI runs on your device where possible (Gemini Nano in Chrome, or Qwen), or uses your own Google AI key. You can also turn AI off.
       </Typography>
 
