@@ -16,6 +16,12 @@ function fakeFetch(url: string): Response {
   return json({ id, title: `T${id}`, genres: [], 'watch/providers': { results: { IN: { flatrate: (carriers[id] ?? []).map((p, i) => ({ provider_id: 900 + i, provider_name: p, logo_path: '' })) } } } });
 }
 
+// Forget fetched titles (memory, cache rows and the recent-titles store) so the next check sees new providers.
+const forget = async () => {
+  await db.cache.clear();
+  await db.titles.clear();
+};
+
 const settings: Settings = { ...DEFAULT_SETTINGS, onboarded: true, tmdbToken: 'x'.repeat(32), services: ['netflix', 'prime'] };
 const item = (id: number, lists = ['watchlist']): UserItem => ({ key: `movie:${id}`, tmdbId: id, type: 'movie', title: `T${id}`, genreIds: [], lists, addedAt: 0, updatedAt: id });
 
@@ -42,16 +48,16 @@ describe('Home shelves', () => {
     expect(first.map((s) => [s.item.key, s.isNew])).toEqual([['movie:1', false]]);
 
     carriers = { 1: ['Netflix'], 2: ['Some Other'], 3: ['Amazon Prime Video'] };
-    await db.cache.clear();
+    await forget();
     const second = await streamingNow(items, settings, 2_000);
     expect(second.map((s) => [s.item.key, s.isNew])).toEqual([
       ['movie:3', true],
       ['movie:1', false],
     ]);
     // Still "new" a few days later, but not after a week.
-    await db.cache.clear();
+    await forget();
     expect((await streamingNow(items, settings, 2_000 + 3 * 86_400_000)).find((s) => s.item.key === 'movie:3')?.isNew).toBe(true);
-    await db.cache.clear();
+    await forget();
     expect((await streamingNow(items, settings, 2_000 + 8 * 86_400_000)).find((s) => s.item.key === 'movie:3')?.isNew).toBe(false);
   });
 

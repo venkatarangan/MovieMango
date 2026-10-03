@@ -14,6 +14,15 @@ describe('Drive sync merge', () => {
     expect(byKey).toEqual({ 'movie:1': ['favourite'], 'movie:2': ['watched'], 'movie:3': ['favourite'] });
   });
 
+  it('carries custom titles (negative ids) like any other title', () => {
+    const custom: UserItem = { ...item('movie:-1700000000000001', 8, ['favourite']), title: 'Home Video', custom: { originalTitle: 'வீடு', url: 'https://example.com' } };
+    const deleted: UserItem = { ...custom, lists: [], updatedAt: 9 };
+    const m = mergePayloads(payload({ items: [custom] }), payload({ items: [item('movie:1', 1, ['watchlist'])] }));
+    expect(m.items.find((i) => i.tmdbId < 0)).toEqual(custom);
+    // A delete on another device (an emptied record) wins when it's newer.
+    expect(mergePayloads(payload({ items: [custom] }), payload({ items: [deleted] })).items[0].lists).toEqual([]);
+  });
+
   it('takes settings from the side changed last, but never loses a saved key', () => {
     const fresh = payload({ settings: { languages: ['en'], tmdbToken: '', portrait: '' }, settingsUpdatedAt: 50 });
     const drive = payload({ settings: { languages: ['ta', 'hi'], tmdbToken: 'tok', portrait: 'You love thrillers' }, settingsUpdatedAt: 20 });

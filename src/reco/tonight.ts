@@ -16,7 +16,7 @@ import type { Settings } from '../db/settings';
 import { genreName, MOVIE_GENRES, TV_GENRES } from '../lib/genres';
 import { languageName } from '../lib/languages';
 import { availabilityFrom, resolveProviderIds, type Availability } from '../lib/providers';
-import type { MangoRating, MediaType, TitleSnapshot, UserItem } from '../lib/types';
+import { isCustom, type MangoRating, type MediaType, type TitleSnapshot, type UserItem } from '../lib/types';
 import { formatRuntime } from '../lib/format';
 import { buildProfile, topGenres, type TasteProfile } from './profile';
 import {
@@ -206,6 +206,7 @@ export async function planTonight(
   const pool = new Map<string, Candidate>();
   const add = (t: TmdbListItem | TitleSnapshot, type: MediaType, source: Source, because?: string) => {
     const snap = 'tmdbId' in t ? t : snapshotFromList(t, type);
+    if (isCustom(snap)) return; // custom titles have no TMDB data or availability
     const key = `${type}:${snap.tmdbId}`;
     const existing = pool.get(key);
     if (existing) {
@@ -250,7 +251,7 @@ export async function planTonight(
         run('serendipity', { with_genres: kidsTv, sort_by: 'vote_average.desc', 'vote_count.gte': 300, page });
       }
     }
-    const seeds = profile.seeds.filter((s) => types.includes(s.type));
+    const seeds = profile.seeds.filter((s) => types.includes(s.type) && !isCustom(s));
     const picked = [...seeds.slice(0, 3), ...seeds.slice(3, 12).sort((a, b) => dailyJitter(a.tmdbId) - dailyJitter(b.tmdbId)).slice(0, 2)];
     for (const seed of picked) {
       jobs.push(

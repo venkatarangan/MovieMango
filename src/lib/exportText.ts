@@ -2,17 +2,22 @@ import { genreName } from './genres';
 import { languageName } from './languages';
 import { formatRuntime, capitalise } from './format';
 import type { Availability } from './providers';
-import type { MangoRating, TitleSnapshot, UserItem } from './types';
+import { isCustom, type MangoRating, type TitleSnapshot, type UserItem } from './types';
 
 export const BYLINE = 'Ripe picks for your mood and your moment.';
 export const APP_URL = 'https://watch.mangoidiots.com';
 
-const CREDITS = 'Data: TMDB (this product uses the TMDB API but is not endorsed or certified by TMDB) · Streaming availability: JustWatch';
+export const CREDITS = 'Data: TMDB (this product uses the TMDB API but is not endorsed or certified by TMDB) · Streaming availability: JustWatch';
 
 const accessLabel = { subscription: 'subscription', free: 'free', ads: 'free with ads' } as const;
 
 export function tmdbUrl(t: Pick<TitleSnapshot, 'type' | 'tmdbId'>) {
   return `https://www.themoviedb.org/${t.type}/${t.tmdbId}`;
+}
+
+/** Where to read more: TMDB, or a custom title's own link (if any). */
+export function moreUrl(t: Pick<TitleSnapshot, 'type' | 'tmdbId' | 'custom'>) {
+  return isCustom(t) ? t.custom?.url : tmdbUrl(t);
 }
 
 export function ratingLabel(r?: MangoRating) {
@@ -45,11 +50,15 @@ export function titleToText(t: TitleExport): string {
     t.myRating ? `My rating: ${ratingLabel(t.myRating)}` : '',
   ].filter(Boolean);
   const people = [t.director ? `Director: ${t.director}` : '', t.cast?.length ? `Cast: ${t.cast.slice(0, 4).join(', ')}` : ''].filter(Boolean);
-  const where = t.availability?.length
-    ? `Where to watch (India): ${t.availability.map((a) => `${a.service.name} (${accessLabel[a.access]})`).join(', ')}`
-    : 'Where to watch (India): not on the major streaming services right now';
+  const where = isCustom(s)
+    ? ''
+    : t.availability?.length
+      ? `Where to watch (India): ${t.availability.map((a) => `${a.service.name} (${accessLabel[a.access]})`).join(', ')}`
+      : 'Where to watch (India): not on the major streaming services right now';
+  const more = moreUrl(s);
   return [
     `🎬 ${head.join(' · ')}`,
+    s.custom?.originalTitle ?? '',
     meta.join(' · '),
     people.join(' · '),
     '',
@@ -57,7 +66,7 @@ export function titleToText(t: TitleExport): string {
     '',
     where,
     t.mangoidiots ? `Mangoidiots review${t.mangoidiots.rating ? ` (${capitalise(t.mangoidiots.rating)})` : ''}: ${t.mangoidiots.link}` : '',
-    `More: ${tmdbUrl(s)}`,
+    more ? `More: ${more}` : '',
     '',
     `Shared from MovieMango: ${BYLINE.charAt(0).toLowerCase() + BYLINE.slice(1)} ${APP_URL}`,
     CREDITS,
@@ -98,6 +107,6 @@ export function everythingToText(sections: { name: string; items: UserItem[] }[]
     .join('\n\n');
 }
 
-export function safeFilename(name: string) {
-  return `MovieMango-${name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '')}.txt`;
+export function safeFilename(name: string, ext = 'txt') {
+  return `MovieMango-${name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '')}.${ext}`;
 }
