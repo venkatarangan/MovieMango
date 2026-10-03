@@ -10,6 +10,7 @@ import { setAnalytics, trackPage } from './lib/analytics';
 import Tonight from './pages/Tonight';
 
 const About = lazy(() => import('./pages/About'));
+const Import = lazy(() => import('./pages/Import'));
 const Library = lazy(() => import('./pages/Library'));
 const ListPage = lazy(() => import('./pages/ListPage'));
 const Privacy = lazy(() => import('./pages/Privacy'));
@@ -76,6 +77,7 @@ export default function App() {
                     <Route path="/title/:type/:id" element={<RequireSetup><Title /></RequireSetup>} />
                     <Route path="/library" element={<RequireSetup><Library /></RequireSetup>} />
                     <Route path="/list/:listId" element={<RequireSetup><ListPage /></RequireSetup>} />
+                    <Route path="/import" element={<RequireSetup><Import /></RequireSetup>} />
                     <Route path="/reviews" element={<RequireSetup><Reviews /></RequireSetup>} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/about" element={<About />} />

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Your own titles: add movies and series that aren't on TMDB (original-script title, description, director, cast, link), from Search or the Library.
+- Markdown export of any list or all lists, and a new Import page: paste Markdown, a plain list or an IMDb/Letterboxd CSV, review the TMDB matches, then import. Includes a ready-made prompt for converting other apps' exports with an AI.
+
 ## 0.1.0 (2026-10-03)
 
 First release.

@@ -1,4 +1,5 @@
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import PlaylistAddRoundedIcon from '@mui/icons-material/PlaylistAddRounded';
 import UploadRoundedIcon from '@mui/icons-material/UploadRounded';
 import { Box, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
@@ -148,6 +149,9 @@ export default function SettingsPage() {
               Restore from file
             </Button>
             <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={(e) => e.target.files?.[0] && importBackup(e.target.files[0])} />
+            <Button variant="outlined" color="inherit" startIcon={<PlaylistAddRoundedIcon />} component={RouterLink} to="/import">
+              Import a list
+            </Button>
             <Button color="inherit" onClick={async () => { await db.cache.clear(); toast('Cache cleared', 'info'); }}>
               Clear cached data
             </Button>

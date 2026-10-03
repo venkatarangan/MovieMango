@@ -214,3 +214,19 @@ export function snapshotFromDetails(d: TmdbDetails, type: MediaType): TitleSnaps
 export function trending(window: 'day' | 'week' = 'week') {
   return tmdbGet<TmdbPage>(`/trending/all/${window}`, { language: TMDB_LANGUAGE }, 6 * HOUR);
 }
+
+/** Search one type, optionally narrowed to a release year (for imports). */
+export function searchTitles(type: MediaType, query: string, year?: number) {
+  const yearParam = year ? { [type === 'movie' ? 'year' : 'first_air_date_year']: year } : {};
+  return tmdbGet<TmdbPage>(`/search/${type}`, { query, include_adult: 'false', language: TMDB_LANGUAGE, ...yearParam }, DAY);
+}
+
+/** Looks up a title by its IMDb id (tt…). */
+export function findByImdb(imdbId: string) {
+  return tmdbGet<{ movie_results: TmdbListItem[]; tv_results: TmdbListItem[] }>(`/find/${imdbId}`, { external_source: 'imdb_id', language: TMDB_LANGUAGE }, 7 * DAY);
+}
+
+/** Basic details without the extras (for imports by TMDB id). Never call it with a custom title's negative id. */
+export function getTitleBasics(type: MediaType, id: number) {
+  return tmdbGet<TmdbDetails>(`/${type}/${id}`, { language: TMDB_LANGUAGE }, 3 * DAY);
+}
