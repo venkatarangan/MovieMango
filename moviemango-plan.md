@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -828,3 +828,17 @@ Full guide: `docs/testing-locally.md`.
   - **Gemini:** a free tier with no card and no billing account, so the user can't be charged; past the daily limit, requests pause until the next day; no Google Cloud setup needed. Links: Gemini API pricing (free tier), free-tier limits.
 - **Infra check:** the CNAME resolves straight to GitHub (DNS only, as intended); the site, `privacy.html`, manifest, service worker and logos are all served; github.io redirects to the custom domain. The HTTPS certificate was still being issued; Enforce HTTPS is switched on once it's ready.
 - **For future sessions:** `CLAUDE.md` (context, commands, rules, gotchas, open items) and `docs/operations.md` (hosting, DNS, variables, routine tasks).
+
+---
+
+## 17. Tenth-round prompt (verbatim)
+
+> can you check now and enable https. and then update markdown and claude.md
+
+---
+
+## 18. Response: HTTPS enabled
+
+- The certificate was still pending, so the custom domain was removed and re-added in Pages. GitHub issued a Let's Encrypt certificate for `watch.mangoidiots.com` within a minute (valid to 2027-01-01, renews automatically).
+- **Enforce HTTPS** is on. `https://watch.mangoidiots.com` returns 200, `http://` redirects to `https://`, and `venkatarangan.github.io/MovieMango` redirects to the custom domain.
+- Updated `docs/operations.md` (HTTPS status and the fix for a stuck certificate) and `CLAUDE.md` (infra complete, social features out of scope).
