@@ -4,13 +4,13 @@ A static PWA with no backend. The browser talks directly to TMDB, Wikipedia, Wor
 
 | Folder | What's there |
 |---|---|
-| `src/api` | TMDB, Wikipedia and Mangoidiots clients; rate-limited fetch with an IndexedDB cache |
+| `src/api` | TMDB, Wikipedia and Mangoidiots clients; rate-limited fetch, session + IndexedDB cache, recent-titles store (`recent.ts`) |
 | `src/ai` | Engines (Gemini Nano, Qwen/WebLLM, Gemini REST), automatic engine choice, prompts |
 | `src/reco` | Taste profile, scoring, the Tonight pipeline, Home shelves (`home.ts`) |
 | `src/db` | Dexie tables (items, lists, kv settings, cache, titles) |
 | `src/sync` | Google sign-in, the Drive app-folder file, merging |
-| `src/lib` | India OTT catalogue, languages, export/share, analytics |
-| `src/pages`, `src/components` | UI |
+| `src/lib` | India OTT catalogue, languages, export/share, Markdown parse/export and import matching, custom titles, episode logic, analytics |
+| `src/pages`, `src/components` | UI. Routes: `/` Home, `/tonight`, `/search`, `/title/:type/:id`, `/library`, `/list/:id`, `/import`, `/reviews`, `/settings`, `/about`, `/privacy`, `/welcome` |
 
 **Key decisions**
 - **AI never invents titles.** TMDB supplies real candidates (filtered by the user's services, languages, runtime and certificate) and a scoring formula ranks them; the model only re-ranks and explains. If AI fails, the scored list is shown.

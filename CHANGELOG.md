@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-10-03)
 
 - New Home page: search with suggestions, three instant "Feeling lucky?" picks, Continue watching, watchlist titles now on your services (marked New when a service adds them), and random movie and TV shelves. Tonight moved to its own tab.
 - Search links: `/?q=title` and `/#/search?q=title` open Search; browsers can add MovieMango as a search engine; app shortcuts for Search and Tonight.
