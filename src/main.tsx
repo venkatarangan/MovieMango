@@ -9,6 +9,10 @@ import App from './App';
 import { pruneCache } from './db';
 import { startSync } from './sync/sync';
 
+// Search links such as https://watch.mangoidiots.com/?q=dune (or localhost:5173/?q=dune) open the Search page.
+const q = new URLSearchParams(location.search).get('q');
+if (q !== null) history.replaceState(null, '', `${location.pathname}#/search?q=${encodeURIComponent(q)}`);
+
 registerSW({ immediate: true });
 void pruneCache();
 void startSync();

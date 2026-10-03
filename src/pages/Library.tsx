@@ -2,7 +2,7 @@ import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import { Box, Button, Card, CardActionArea, Tab, Tabs, Typography } from '@mui/material';
 import { useState } from 'react';
-import { Link as RouterLink } from 'react-router';
+import { Link as RouterLink, useSearchParams } from 'react-router';
 import { EmptyState } from '../components/common';
 import { NewListDialog } from '../components/ListActions';
 import PosterCard, { PosterGrid } from '../components/PosterCard';
@@ -91,8 +91,12 @@ function CustomLists() {
   );
 }
 
+const TABS = ['favourites', 'watchlist', 'watched', 'lists'];
+
 export default function Library() {
-  const [tab, setTab] = useState(0);
+  const [params, setParams] = useSearchParams();
+  const tab = Math.max(0, TABS.indexOf(params.get('tab') ?? ''));
+  const setTab = (i: number) => setParams(i ? { tab: TABS[i] } : {}, { replace: true });
   const items = useAllItems();
   const lists = useCustomLists();
 

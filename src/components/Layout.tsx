@@ -1,5 +1,6 @@
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import CollectionsBookmarkRoundedIcon from '@mui/icons-material/CollectionsBookmarkRounded';
+import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
 import RateReviewRoundedIcon from '@mui/icons-material/RateReviewRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
@@ -9,15 +10,15 @@ import { SyncIndicator } from './Drive';
 import { Wordmark } from './Logo';
 
 const NAV = [
-  { to: '/', label: 'Tonight', icon: <AutoAwesomeRoundedIcon /> },
-  { to: '/search', label: 'Search', icon: <SearchRoundedIcon /> },
+  { to: '/', label: 'Home', icon: <HomeRoundedIcon /> },
+  { to: '/tonight', label: 'Tonight', icon: <AutoAwesomeRoundedIcon /> },
   { to: '/library', label: 'Library', icon: <CollectionsBookmarkRoundedIcon /> },
   { to: '/reviews', label: 'Reviews', icon: <RateReviewRoundedIcon /> },
   { to: '/settings', label: 'Settings', icon: <SettingsRoundedIcon /> },
 ];
 
 function activeIndex(path: string) {
-  if (path === '/') return 0;
+  if (path === '/' || path.startsWith('/search')) return 0;
   const i = NAV.findIndex((n) => n.to !== '/' && path.startsWith(n.to));
   if (path.startsWith('/list')) return 2;
   return i;
@@ -39,25 +40,25 @@ export default function Layout() {
               <Wordmark size={34} />
             </Box>
             <SyncIndicator />
-            {desktop
-              ? NAV.map((n, i) => (
-                  <Button
-                    key={n.to}
-                    component={RouterLink}
-                    to={n.to}
-                    startIcon={n.icon}
-                    color={i === active ? 'primary' : 'inherit'}
-                    variant={i === active ? 'contained' : 'text'}
-                    sx={{ px: 2 }}
-                  >
-                    {n.label}
-                  </Button>
-                ))
-              : location.pathname !== '/search' && (
-                  <Button component={RouterLink} to="/search" color="inherit" aria-label="Search" sx={{ minWidth: 0, p: 1 }}>
-                    <SearchRoundedIcon />
-                  </Button>
-                )}
+            {location.pathname !== '/' && location.pathname !== '/search' && (
+              <Button component={RouterLink} to="/search" color="inherit" aria-label="Search" sx={{ minWidth: 0, p: 1 }}>
+                <SearchRoundedIcon />
+              </Button>
+            )}
+            {desktop &&
+              NAV.map((n, i) => (
+                <Button
+                  key={n.to}
+                  component={RouterLink}
+                  to={n.to}
+                  startIcon={n.icon}
+                  color={i === active ? 'primary' : 'inherit'}
+                  variant={i === active ? 'contained' : 'text'}
+                  sx={{ px: 2 }}
+                >
+                  {n.label}
+                </Button>
+              ))}
           </Toolbar>
         </Container>
       </AppBar>

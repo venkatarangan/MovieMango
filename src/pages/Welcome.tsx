@@ -173,7 +173,7 @@ export default function Welcome() {
     for (const t of picked.values()) await toggleList(snapshotFromList(t, t.type), 'favourite', true);
     await saveSettings({ onboarded: true });
     trackEvent('onboarding_done', { favourites: picked.size, languages: langs.length });
-    navigate('/', { replace: true });
+    navigate('/tonight', { replace: true });
   };
 
   const togglePick = (t: Tile) => {

@@ -10,3 +10,4 @@ __pycache__
 .vite
 *.tsbuildinfo
 backup.bat
+.claude/worktrees/

@@ -44,6 +44,13 @@ async function localPayload(): Promise<SyncPayload> {
   return { app: 'MovieMango', version: 1, savedAt: Date.now(), items: await db.items.toArray(), lists: await db.lists.toArray(), settings: pickSynced(s), settingsUpdatedAt: s.settingsUpdatedAt };
 }
 
+/** With key sync off, keys are neither read from nor written to Drive (and any old copy there is removed). */
+function withoutKeys<T extends SyncPayload | null>(p: T): T {
+  if (!p) return p;
+  const { tmdbToken: _t, geminiKey: _g, ...settings } = p.settings ?? {};
+  return { ...p, settings };
+}
+
 async function applyLocally(merged: SyncPayload) {
   applyingRemote = true;
   try {
@@ -62,8 +69,9 @@ async function doSync(t: AccessToken): Promise<{ restoredItems: number; restored
   const remoteFile = fileId ? { id: fileId } : await findSyncFile(t.token);
   fileId = remoteFile?.id;
   const remote = remoteFile ? await downloadJson<SyncPayload>(t.token, remoteFile.id).catch(() => null) : null;
-  const local = await localPayload();
-  const merged = mergePayloads(local, remote?.app === 'MovieMango' ? remote : null);
+  const { driveSyncKeys } = await getSettings();
+  const local = driveSyncKeys ? await localPayload() : withoutKeys(await localPayload());
+  const merged = mergePayloads(local, remote?.app === 'MovieMango' ? (driveSyncKeys ? remote : withoutKeys(remote)) : null);
   const newFromRemote = merged.items.length - local.items.length;
   if (!sameContent(local, merged)) await applyLocally(merged);
   if (!sameContent(remote, merged)) fileId = await uploadJson(t.token, merged, fileId);
@@ -101,12 +109,15 @@ export function syncNow(): Promise<void> {
   return running;
 }
 
-/** Debounced sync after local changes. */
+/** Debounced sync after local changes. With auto-sync off, it only marks changes as pending. */
 export function scheduleSync(delayMs = 15_000) {
   if (state.status === 'off' || applyingRemote) return;
   if (state.status !== 'needs-auth') set({ status: 'pending' });
   clearTimeout(timer);
-  timer = setTimeout(() => void syncNow(), delayMs);
+  void getSettings().then((s) => {
+    clearTimeout(timer);
+    if (s.driveAutoSync) timer = setTimeout(() => void syncNow(), delayMs);
+  });
 }
 
 /**
@@ -163,9 +174,9 @@ export async function startSync() {
   }
   onSettingsSaved((changedSynced) => changedSynced && scheduleSync());
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && state.status === 'pending') void syncNow();
+    if (document.visibilityState === 'hidden' && state.status === 'pending') void getSettings().then((now) => (now.driveAutoSync ? syncNow() : undefined));
   });
-  if (s.driveConnected && validToken()) void syncNow();
+  if (s.driveConnected && s.driveAutoSync && validToken()) void syncNow();
 }
 
 /** Called after onboarding/connect so the status reflects the new connection. */
