@@ -1,11 +1,11 @@
 # MovieMango: notes for AI coding sessions
 
-Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.com, repo github.com/venkatarangan/MovieMango (MIT). The owner is Venkatarangan Thirumalai (Mangoidiots).
+Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.com (GitHub Pages, HTTPS enforced, Cloudflare DNS-only CNAME), repo github.com/venkatarangan/MovieMango (MIT). The owner is Venkatarangan Thirumalai (Mangoidiots).
 
 ## Commands
 - `npm run dev` (port 5173) · `npm test` (Vitest) · `npm run e2e` (Playwright, all APIs mocked) · `npm run typecheck` · `npm run build`
 - Run `npm test` and `npm run e2e` before committing UI or logic changes, and look at the screenshots in `test-results/screens/`.
-- A push to `main` deploys (GitHub Actions → Pages). See `docs/operations.md`.
+- A push to `main` deploys (GitHub Actions → Pages) in about a minute. Hosting, DNS and fixes: `docs/operations.md`.
 
 ## Where things are
 - Code map and key decisions: `docs/architecture.md`. Local testing: `docs/testing-locally.md`.
@@ -31,6 +31,7 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 - The Chrome Prompt API has been stable for web pages since Chrome 148. Check fast-moving facts like this before stating limits.
 
 ## Open items
+- Infra is complete (DNS, Pages, HTTPS). Social features (posts, reactions, friends) are out of scope; they would need a server.
 - Google OAuth client ID not created yet. Set the Actions variable `GOOGLE_CLIENT_ID`; see `docs/testing-locally.md`.
 - GA4 ID not supplied yet (Actions variable `GA_ID`).
 - Not built: TV episode tracking, "now on your services" alerts, image share cards, Tamil/Hindi UI, YouTube sync, more regions.
