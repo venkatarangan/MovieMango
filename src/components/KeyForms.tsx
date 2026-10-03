@@ -48,6 +48,25 @@ function Steps({ steps }: { steps: React.ReactNode[] }) {
   );
 }
 
+/** Reassures users that a key is free, with links to the provider's own pages. */
+function CostNote({ children, links }: { children: React.ReactNode; links: [string, string][] }) {
+  return (
+    <Alert icon={false} severity="success" sx={{ mb: 1.5, '& .MuiAlert-message': { width: '100%' } }}>
+      <Typography variant="body2" sx={{ fontWeight: 700 }}>
+        💸 Free. No cost for normal use.
+      </Typography>
+      <Typography variant="body2" sx={{ mt: 0.5 }}>
+        {children}
+      </Typography>
+      <Typography variant="caption" sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, mt: 0.75 }}>
+        {links.map(([href, label]) => (
+          <span key={href}>{ext(href, label)}</span>
+        ))}
+      </Typography>
+    </Alert>
+  );
+}
+
 const ext = (href: string, text: string) => (
   <Link href={href} target="_blank" rel="noopener noreferrer" sx={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 0.25 }}>
     {text}
@@ -78,10 +97,18 @@ export function TmdbKeyForm({ onSaved, compact }: { onSaved?: () => void; compac
   return (
     <Box>
       {!compact && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          MovieMango gets titles, posters and “where to watch” from The Movie Database (TMDB). TMDB gives a free key for personal, non-commercial use. It takes about two minutes, and the key stays in this browser.
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          MovieMango gets titles, posters and “where to watch” from The Movie Database (TMDB), a free, community-built film database. You need your own key; it takes about two minutes and stays in this browser.
         </Typography>
       )}
+      <CostNote
+        links={[
+          ['https://www.themoviedb.org/api-terms-of-use', 'TMDB API terms'],
+          ['https://developer.themoviedb.org/docs/faq', 'TMDB API FAQ'],
+        ]}
+      >
+        TMDB’s API is free for personal, non-commercial use, which is exactly what MovieMango is. No credit card or payment details are asked for.
+      </CostNote>
       <Steps
         steps={[
           <>Create a free TMDB account at {ext('https://www.themoviedb.org/signup', 'themoviedb.org/signup')} and confirm your email.</>,
@@ -130,15 +157,26 @@ export function GeminiKeyForm({ onSaved }: { onSaved?: () => void }) {
 
   return (
     <Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+        Optional. A Google AI Studio key lets MovieMango use Google’s Gemini AI on any device, including phones.
+      </Typography>
+      <CostNote
+        links={[
+          ['https://ai.google.dev/gemini-api/docs/pricing', 'Gemini API pricing (see “Free tier”)'],
+          ['https://ai.google.dev/gemini-api/docs/rate-limits', 'Free-tier limits'],
+        ]}
+      >
+        Google AI Studio has a free tier. You don’t add a credit card or billing account, so you can’t be charged. If you ever hit the daily free limit, Google just pauses requests until the next day. A normal evening of MovieMango uses only a few requests. No Google Cloud setup is needed.
+      </CostNote>
       <Steps
         steps={[
           <>Open {ext('https://aistudio.google.com/apikey', 'Google AI Studio → API keys')} and sign in with your Google account.</>,
-          <>Choose <b>Create API key</b>. The free tier needs no credit card.</>,
+          <>Choose <b>Create API key</b>. If it asks about a project, let it create one for you.</>,
           <>Copy the key and paste it below. It stays in this browser and is only sent to Google.</>,
         ]}
       />
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-        On Google’s free tier, prompts may be used to improve Google’s products. Your prompts include your mood and the titles you’ve saved, but never your keys.
+        On the free tier, Google may use prompts to improve its products. Prompts include your mood and the titles you’ve saved, never your keys.
       </Typography>
       {settings?.geminiKey && state === 'idle' && (
         <Alert severity="success" sx={{ mb: 1.5 }} action={<Button color="inherit" size="small" onClick={() => saveSettings({ geminiKey: '' })}>Remove</Button>}>

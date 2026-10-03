@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** rounds 1–2 (§1–6) are design, §7–8 the first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing. **Later rounds replace earlier ones where they differ.**
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -810,3 +810,21 @@ Full guide: `docs/testing-locally.md`.
 - **Shortened:** README (end-user first, a short developer section), About page, Tonight page wording, `docs/testing-locally.md`, `docs/architecture.md` and the changelog.
 - **Published:** `github.com/venkatarangan/MovieMango` (public), GitHub Pages deployed from Actions with the custom domain `watch.mangoidiots.com`.
 - **Cloudflare DNS (done manually by the owner):** a `CNAME` record `watch` → `venkatarangan.github.io`, **DNS only** (grey cloud). Then turn on **Enforce HTTPS** in GitHub Pages once the certificate is issued.
+
+---
+
+## 15. Ninth-round prompts (verbatim)
+
+> dns entry is done. have you included for enduser while using the app instructions on how to get tmdb api key and google cloud ai studio api key in a simple way, make it clear to them there are no costs for normal usage and give them link to the respective sites for more details to convince them.
+
+> can you dns and basics in infra are in order. commit and write markdownds for future sessions
+
+---
+
+## 16. Response: "it's free" notes, infra check, session notes
+
+- **Key instructions in the app:** both the TMDB and the Google AI Studio steps were already there. Each now also has a green **"💸 Free. No cost for normal use."** note with links to the provider's own pages:
+  - **TMDB:** free for personal, non-commercial use, no card or payment details asked. Links: TMDB API terms, TMDB API FAQ.
+  - **Gemini:** a free tier with no card and no billing account, so the user can't be charged; past the daily limit, requests pause until the next day; no Google Cloud setup needed. Links: Gemini API pricing (free tier), free-tier limits.
+- **Infra check:** the CNAME resolves straight to GitHub (DNS only, as intended); the site, `privacy.html`, manifest, service worker and logos are all served; github.io redirects to the custom domain. The HTTPS certificate was still being issued; Enforce HTTPS is switched on once it's ready.
+- **For future sessions:** `CLAUDE.md` (context, commands, rules, gotchas, open items) and `docs/operations.md` (hosting, DNS, variables, routine tasks).
