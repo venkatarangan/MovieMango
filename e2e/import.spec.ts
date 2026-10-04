@@ -1,5 +1,4 @@
 import { expect, test, type Page } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
 import { mockApis } from './fixtures';
 
 const shot = (name: string, project: string) => `test-results/screens/${project}-${name}.png`;
@@ -118,12 +117,19 @@ test('custom titles, Markdown import and export', async ({ page }, info) => {
   await expect(page.getByText('2 titles')).toBeVisible();
 
   // Export all as Markdown (desktop browsers download; phones use the share sheet).
+  // Keep each downloaded Blob so the test can read the file in the page (no Node file APIs needed).
+  await page.evaluate(() => {
+    const w = window as unknown as { __blobs: Blob[] };
+    const original = URL.createObjectURL.bind(URL);
+    w.__blobs = [];
+    URL.createObjectURL = (b: Blob | MediaSource) => (b instanceof Blob && w.__blobs.push(b), original(b));
+  });
   await page.getByRole('button', { name: 'Export all' }).click();
   const mdItem = page.getByRole('menuitem', { name: /Download as Markdown/ });
   if (await mdItem.isVisible()) {
     const [download] = await Promise.all([page.waitForEvent('download'), mdItem.click()]);
     expect(download.suggestedFilename()).toBe('MovieMango-all-lists.md');
-    const md = await readFile((await download.path())!, 'utf8');
+    const md = await page.evaluate(() => (window as unknown as { __blobs: Blob[] }).__blobs.at(-1)!.text());
     expect(md).toContain('not endorsed or certified by TMDB');
     expect(md).toContain('# Watchlist\n- ');
     expect(md).toContain('- Madras Nights (2003) · movie · tmdb: 103');

@@ -28,7 +28,8 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 - TMDB provider IDs change after mergers (e.g. Hotstar → JioHotstar); `src/lib/providers.ts` matches by name.
 - The WebLLM chunk (~6 MB) is lazy and excluded from the service-worker precache (`vite.config.ts`).
 - Playwright runs with `timezoneId: Asia/Kolkata` so India is detected.
-- Tests on `/mnt/c` (WSL) can stall (jsdom import takes minutes when the disk is busy). Run them from an rsync copy on the Linux filesystem with its own `npm ci`. Port 5199 must be free for Playwright.
+- Tests on `/mnt/c` (WSL) can stall (jsdom import takes minutes when the disk is busy). Run them from an rsync copy on the Linux filesystem with its own `npm ci`, excluding `*.tsbuildinfo` (a stale one hid a type error that then failed CI). Port 5199 must be free for Playwright.
+- `tsconfig.json` has no Node types (it covers `e2e` too), so specs can't import `node:*`; read downloads in the page instead.
 - Custom titles have a **negative `tmdbId`**: never send one to TMDB (`isCustom()`).
 - TMDB responses are cached hard (`src/api/http.ts`, `src/api/recent.ts`); cached objects are shared, so don't mutate them. Every new TMDB call should go through `tmdbGet`.
 - The Chrome Prompt API has been stable for web pages since Chrome 148. Check fast-moving facts like this before stating limits.
