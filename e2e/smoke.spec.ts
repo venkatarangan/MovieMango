@@ -58,8 +58,19 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await page.getByRole('button', { name: /Find my picks/ }).click();
   await expect(page.getByRole('heading', { name: 'Your picks' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/Ranked without AI/)).toBeVisible();
-  expect(await page.getByRole('button', { name: 'Not tonight' }).count()).toBeGreaterThan(0);
   await page.screenshot({ path: shot('07-picks', p), fullPage: true });
+  // Watchlist, Watched, Liked it, Loved it or Not for me takes a pick off the list (Undo is in the toast).
+  const pickCount = await page.getByRole('button', { name: 'Loved it' }).count();
+  expect(pickCount).toBeGreaterThan(1);
+  await page.getByRole('button', { name: 'Watchlist' }).first().click();
+  await expect(page.getByText(/Added to Watchlist. We won’t suggest it again tonight/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Loved it' })).toHaveCount(pickCount - 1);
+  // Leaving Tonight and coming back shows the same picks and selections, without running again.
+  await page.getByRole('link', { name: 'Home' }).first().click();
+  await page.goto('/#/tonight');
+  await expect(page.getByRole('heading', { name: 'Your picks' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Loved it' })).toHaveCount(pickCount - 1);
+  await expect(page.getByRole('radio', { name: /Tired/ })).toHaveAttribute('aria-checked', 'true');
 
   // Home: search first, then three lucky picks and the shelves.
   await page.goto('/#/');

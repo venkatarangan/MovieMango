@@ -1,7 +1,7 @@
 {
   "name": "moviemango",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "MovieMango: ripe picks for your mood and your moment. Private, free and open.",
   "license": "MIT",
   "type": "module",

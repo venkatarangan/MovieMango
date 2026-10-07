@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -1009,3 +1009,14 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 
 - Home suggestion rows (Movies/Shows for you, World picks, this week's language) and Feeling lucky keep their slots: when a shown title is saved, watched, 👍/❤️ or 👎, the next candidate takes that exact slot and the rest don't move; Undo puts the original back (`src/lib/slots.ts`, `useSlots` in `Home.tsx`). The rows also skip titles already on the watchlist. Feeling lucky picks got inline ＋ and 👎 (`QuickActions inline`); picks that were already on the watchlist (the nudge) stay until acted on.
 - Part of 0.3.1 (not yet published when asked). Checked: typecheck, build, 110 unit tests (`tests/slots.test.ts`), 16 Playwright tests (row size kept, saved title replaced, lucky pick replaced).
+
+---
+
+## 29. Twentieth-round prompt (verbatim) and response
+
+> in the https://watch.mangoidiots.com/#/tonight list how to say add watchlist (this should do not tonight), wathched, liked it, loved it lists. once i add they can go away from there. there should also be an option not for me. 2) Once a tonight list is shown it can be cached, so that I go to another page and come here, currently the page is empty, it can show the last result with last selections - once I change and press find my picks, they can be changed. any questions?
+
+- No questions; one call made: "Later" and "Not tonight" are folded into **Watchlist** (adds to the watchlist and skips it for a day in Tonight).
+- Each pick ends with an action bar: Watchlist · Watched · Liked it · Loved it · Not for me. Acting takes the pick off the list; the toast's Undo restores the item (incl. `notTonightUntil`, now part of `restoreItem`) and the pick. When every pick is sorted: "You've sorted every pick".
+- Tonight keeps the last run in `sessionStorage` (`mm.tonight.last`: picks, hidden picks, time) and all selections incl. the typed request (`mm.tonight`), so leaving and coming back shows them until "Find new picks". The header shows when the picks were made. Tab-only, like before.
+- 0.3.2. Checked: typecheck, build, 110 unit tests, 16 Playwright tests (smoke covers an action removing a pick and the picks surviving navigation), screenshots.

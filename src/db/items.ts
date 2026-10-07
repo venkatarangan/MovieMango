@@ -59,12 +59,13 @@ export async function markNotTonight(snapshot: TitleSnapshot, days = 7) {
   });
 }
 
-/** Puts lists, rating and watched date back as they were (for Undo). `prev` undefined means "never saved". */
+/** Puts lists, rating, watched date and "not tonight" back as they were (for Undo). `prev` undefined means "never saved". */
 export async function restoreItem(snapshot: TitleSnapshot, prev: UserItem | undefined) {
   return upsert(snapshot, (item) => {
     item.lists = prev?.lists ?? [];
     item.rating = prev?.rating;
     item.watchedAt = prev?.watchedAt;
+    item.notTonightUntil = prev?.notTonightUntil;
   });
 }
 
