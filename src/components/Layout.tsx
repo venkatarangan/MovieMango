@@ -71,11 +71,14 @@ export default function Layout() {
         <Box component="footer" sx={{ borderTop: 1, borderColor: 'divider', py: 3 }}>
           <Container maxWidth="lg" sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="body2" color="text.secondary">
-              🔒 Private · 💸 Free · 🔓 Open — <Link component={RouterLink} to="/about" color="inherit">About</Link> ·{' '}
+              🔒 Private · 💸 Free · 🔓 Open · 🧠 Local AI by default — <Link component={RouterLink} to="/about" color="inherit">About</Link> ·{' '}
               <Link component={RouterLink} to="/privacy" color="inherit">Privacy</Link>
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Data from TMDB (not endorsed or certified by TMDB) · Streaming availability by JustWatch · Reviews by Mangoidiots
+              Data from TMDB (not endorsed or certified by TMDB) · Streaming availability by JustWatch · Reviews by{' '}
+              <Link href="https://mangoidiots.com" target="_blank" rel="noopener noreferrer" color="inherit">
+                Mangoidiots
+              </Link>
             </Typography>
           </Container>
         </Box>

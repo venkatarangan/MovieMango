@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -910,3 +910,57 @@ Answers to Claude's questions (options chosen): Drive "configurable" = sync sett
 - **Setup done by the owner:** Drive API enabled; Google Auth Platform (External, published); scopes `drive.appdata`, `openid`, `userinfo.email`; Web client with origins `https://watch.mangoidiots.com`, `http://localhost:5173`, `http://localhost:4173`. Client ID in the Actions variable `GOOGLE_CLIENT_ID` and `.env.local`.
 - **Next:** Branding (homepage, `privacy.html`, `mangoidiots.com` domain) and Verification Center, to remove the unverified-app screen.
 - Pushed to redeploy so the live build includes the client ID.
+
+---
+
+## 24. Fifteenth-round prompts (verbatim) and response
+
+> go through the improvements I want and suggest how to do or get clarifications from me, do them carefully. @todo-from-user.txt
+
+`todo-from-user.txt`:
+
+> few enhancements
+>
+> 1. In the home page and other listing pages, below the thumbnail and movie title & info, or over the thumbnail, I should have a quick option to Add or dislike; dislike automatically adds to the movie to the never list, Add asks whether it should go to watchlist, watchlist or favourite.
+>
+> 2. In tonight page and also in #1, where does the movies and tv shows added to never goes, can it be a list listed in library?
+>
+> 3. In the movie page like: https://watch.mangoidiots.com/#/title/movie/101 in the genre buttons on top next to TMDB Rating button, the genre buttons should take me to a listing page where it lists all the movies in the genre, the first hundred on latest. There should be a way for me to type a word or a year or other parameters to filter and see a different hundred.
+>
+> 4. In the lists how do users sort tv shows and movies, today all are jumpled. what do you propose
+>
+> 5. In the movie or tv show listing page, the lead actors and directors name should be hyperlink and clicking should a listing page of the movies/tv shows they acted or directed.
+>
+> 6. In the footer " Reviews by Mangoidiots", the mangoidiots should be an hyperlink to mangoidiots.com website. Also add next to "🔒 Private · 💸 Free · 🔓 Open ", a new label "Local AI by default"
+>
+> 7. In the homepage carousels for movies for you, shows for you, where is the navigation to scroll through them? I don't find it now.
+>
+> 8. In all the lists including favourites, watchlist, watched I should be able to sort them in many parameter axis or filter them on various way. what do you suggest.
+>
+> 9. How do I get recommendation for movies not in the languages I have selected, today with Netflix and subtitles many users would love to watch a movie in any language, how to bring serependitious suggestion or discovery? Your thoughts.
+>
+> 10. Most importantly today we have too many options to ask from the user, like, dislike, favourite, watched, watchlist, moviemango rating: rotten, raw, ripe, delicious. it is overwhelming, how do you propose we consolidate and then reimplement the pages and the whole app.
+
+> will users understand the ratings or shall we go with universal ratings: thumbs-up, thumbs-down and favourites (this is used for recommendations by AI)?
+
+Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons always on; World picks, Tonight "Any language", language of the week; genre pages show everything with filters to narrow.
+
+- **#10 Ratings (v0.3.0):** one status (Watchlist / Watched; TV "watching" from episodes) plus one rating: 👎 Not for me · 👍 Liked it · ❤️ Loved it. 👍/❤️ mark watched; 👎 merges "Never" and "Rotten" and hides the title. Favourites list removed (❤️ instead). Mango ratings stay for Mangoidiots reviews only. Old data converts on open, on sync and on restore (Delicious/Favourite → ❤️, Ripe → 👍, Rotten/never → 👎, Raw → watched). Markdown keeps reading the old words.
+- **#1** ＋ and 👎 on every poster's corner; ＋ opens Watchlist / Watched / 👍 / ❤️; every change has Undo. **#2** Library tab 👎 Not for me (and ❤️ Loved); Tonight's "Never" is now "Not for me".
+- **#3** `/browse/:type`: newest released 100, Next/Previous 100, filter box that reads theme words (TMDB keywords), years/decades and languages, plus genre, sort, language, "On my services", "My languages".
+- **#4/#8** every list: Films/Shows chips with counts, 8 sorts, filters (genre, language, rating, decade), find box; remembered per list.
+- **#5** `/person/:id` from director/creator and cast names: Acting and Directing tabs, newest first, Films/Shows chips.
+- **#6** footer link and "🧠 Local AI by default" (also an About card). **#7** ‹ › arrows on rows for mouse users.
+- **#9** 🌏 World picks row, weekly language row, Tonight "Any language (subtitles OK)" (adds acclaimed titles from other languages to the pool).
+- **Checked:** typecheck, production build, 105 unit tests, 14 Playwright tests (phone and desktop, incl. new `e2e/discover.spec.ts`), screenshots reviewed.
+
+---
+
+## 25. Sixteenth-round prompt (verbatim) and response
+
+> okay, dont worry about existing users as there are none. so no need to convert any data, you can remove those codes and go with clean format for the new features and data structures. also launch an agent to clean up the documentation to show only the new features and labels, how it works, no need to have any reside of the older names, it will confuse users. and lets us ensure we dont hit any google drive throttle limits for enduser, even if the data is synced only on change, we can bundle changes together and sync every 2 minutes or so, not on every change (do the recommended way to handle this).
+
+- **No conversion:** removed `upgradeItem`, the Dexie v3 upgrade (schema stays v2), and the conversion in sync merge and backup restore. User ratings are only `dislike | like | love`; Markdown no longer reads mango words for ratings (stars, scores and 👎 👍 ❤️ words still work). Mango ratings remain for Mangoidiots reviews only. Leftover copy fixed ("Rewatch one I loved", Tonight tip).
+- **Docs:** a subagent rewrote README, CHANGELOG, `docs/architecture.md`, `docs/operations.md` and CLAUDE.md in current terms only. `docs/original-prompt.txt` and this log stay verbatim.
+- **Drive sync, batched** (`src/sync/sync.ts`, `src/sync/drive.ts`): the first unsynced change starts a 2-minute window and the whole batch goes up in one sync (later changes don't push it back); pending changes flush when the tab is hidden or closed (small uploads use `keepalive`); returning after 2+ minutes pulls other devices' changes. A sync is at most 3 calls (metadata, download only if the file changed since our last sync, upload only if needed), one at a time. 429, rate-limit 403s and 5xx are retried with exponential backoff and jitter (honouring `Retry-After`), up to 5 tries; a failed batch retries in the next window.
+- **Checked:** typecheck, 107 unit tests (new `tests/drive.test.ts`), 16 Playwright tests (new `e2e/sync.spec.ts` checks one upload per window, no re-download, flush on hide).

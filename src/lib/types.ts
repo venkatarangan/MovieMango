@@ -1,8 +1,12 @@
 export type MediaType = 'movie' | 'tv';
 
+/** Mangoidiots review ratings (the blog's scale). Only reviews use it; users rate with MyRating. */
 export type MangoRating = 'rotten' | 'raw' | 'ripe' | 'delicious';
 
-export const BUILTIN_LISTS = ['favourite', 'watchlist', 'watched'] as const;
+/** The user's own verdict: 👎 Not for me · 👍 Liked it · ❤️ Loved it. Like and love imply watched. */
+export type MyRating = 'dislike' | 'like' | 'love';
+
+export const BUILTIN_LISTS = ['watchlist', 'watched'] as const;
 export type BuiltinList = (typeof BUILTIN_LISTS)[number];
 
 export const MAX_CUSTOM_LISTS = 50;
@@ -40,8 +44,7 @@ export interface UserItem extends TitleSnapshot {
   key: string;
   /** Built-in list names and custom list ids. */
   lists: string[];
-  rating?: MangoRating;
-  feedback?: 'never';
+  rating?: MyRating;
   notTonightUntil?: number;
   watchedAt?: number;
   /** TV only: watched episode numbers per season number, e.g. { "1": [1,2,3], "2": [1] }. */

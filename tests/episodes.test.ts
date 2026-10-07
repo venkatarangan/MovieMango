@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '../src/db';
-import { markNever, markSeenUpTo, refreshNextEpisode, setSeasonSeen, toggleEpisode, toggleList, useShowsInProgress } from '../src/db/items';
+import { markSeenUpTo, setRating, refreshNextEpisode, setSeasonSeen, toggleEpisode, toggleList, useShowsInProgress } from '../src/db/items';
 import { airedSeasons, computeNextEpisode, countProgress, hasAired, mainSeasons, withSeenUpTo } from '../src/lib/episodes';
 
 const seasons = [
@@ -94,7 +94,7 @@ describe('episode mutators', () => {
     const at = (id: number) => ({ ...show, tmdbId: id });
     for (const id of [205, 206, 207, 208]) await toggleEpisode(at(id), 1, 1, true, seasons);
     await toggleList(at(206), 'watched', true);
-    await markNever(at(207));
+    await setRating(at(207), 'dislike');
     await toggleList(at(209), 'watchlist', true);
     await new Promise((r) => setTimeout(r, 5));
     await toggleEpisode(at(205), 1, 2, true, seasons);

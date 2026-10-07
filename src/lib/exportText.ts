@@ -2,7 +2,8 @@ import { genreName } from './genres';
 import { languageName } from './languages';
 import { formatRuntime, capitalise } from './format';
 import type { Availability } from './providers';
-import { isCustom, type MangoRating, type TitleSnapshot, type UserItem } from './types';
+import { ratingText } from './ratings';
+import { isCustom, type MangoRating, type MyRating, type TitleSnapshot, type UserItem } from './types';
 
 export const BYLINE = 'Ripe picks for your mood and your moment.';
 export const APP_URL = 'https://watch.mangoidiots.com';
@@ -20,9 +21,6 @@ export function moreUrl(t: Pick<TitleSnapshot, 'type' | 'tmdbId' | 'custom'>) {
   return isCustom(t) ? t.custom?.url : tmdbUrl(t);
 }
 
-export function ratingLabel(r?: MangoRating) {
-  return r ? `${capitalise(r)} 🥭` : '';
-}
 
 export interface TitleExport {
   snap: TitleSnapshot;
@@ -32,7 +30,7 @@ export interface TitleExport {
   cast?: string[];
   seasons?: number;
   availability?: Availability[];
-  myRating?: MangoRating;
+  myRating?: MyRating;
   mangoidiots?: { rating?: MangoRating; link: string };
 }
 
@@ -47,7 +45,7 @@ export function titleToText(t: TitleExport): string {
   const meta = [
     (t.genres ?? s.genreIds.map(genreName)).slice(0, 4).join(', '),
     s.voteAverage ? `TMDB ${s.voteAverage.toFixed(1)}/10` : '',
-    t.myRating ? `My rating: ${ratingLabel(t.myRating)}` : '',
+    t.myRating ? `My rating: ${ratingText(t.myRating)}` : '',
   ].filter(Boolean);
   const people = [t.director ? `Director: ${t.director}` : '', t.cast?.length ? `Cast: ${t.cast.slice(0, 4).join(', ')}` : ''].filter(Boolean);
   const where = isCustom(s)
@@ -82,7 +80,7 @@ export function itemLine(item: UserItem, n: number): string {
     item.type === 'tv' ? 'Series' : 'Movie',
     item.runtime ? formatRuntime(item.runtime) : '',
     languageName(item.originalLanguage),
-    item.rating ? ratingLabel(item.rating) : '',
+    ratingText(item.rating),
   ]
     .filter(Boolean)
     .join(' · ');

@@ -1,4 +1,4 @@
-import { Box, Card, CardContent, Link, Stack, Typography } from '@mui/material';
+import { Box, Card, CardContent, Link, Typography } from '@mui/material';
 import { Link as RouterLink } from 'react-router';
 import { LogoMark } from '../components/Logo';
 import { APP_VERSION, SOURCE_URL } from '../lib/appInfo';
@@ -13,6 +13,7 @@ const PILLARS = [
   { emoji: '🔒', title: 'Private', text: 'Your lists and ratings stay in your browser and, if you connect it, your own Google Drive. No MovieMango server, no account with us.' },
   { emoji: '💸', title: 'Free', text: 'No ads, no subscription. You use your own free TMDB key, and optionally a free Google AI key.' },
   { emoji: '🔓', title: 'Open', text: 'MIT-licensed source code on GitHub. Your data is a plain file you own, and every list exports as Markdown.' },
+  { emoji: '🧠', title: 'Local AI by default', text: 'Picks are explained by an AI that runs on your device (Gemini Nano in Chrome, or Qwen). A cloud model is used only if you add your own Gemini key.' },
 ];
 
 export default function About() {
@@ -44,7 +45,7 @@ export default function About() {
         {ext('https://mangoidiots.com', 'Mangoidiots')}
       </Typography>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 4 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, mt: 4 }}>
         {PILLARS.map((p) => (
           <Card key={p.title} variant="outlined" sx={{ borderRadius: '20px', flex: 1 }}>
             <CardContent>
@@ -57,7 +58,7 @@ export default function About() {
             </CardContent>
           </Card>
         ))}
-      </Stack>
+      </Box>
 
       <Typography variant="h5" component="h2" sx={{ mt: 4, mb: 1 }}>
         How it works
@@ -72,7 +73,8 @@ export default function About() {
       </Typography>
       <Box component="ul" sx={{ pl: 2.5, my: 0, '& li': { mb: 0.75 } }}>
         <li><b>Home</b>: search, three “Feeling lucky?” picks, shows to continue, and watchlist titles that are now on your services.</li>
-        <li><b>Lists</b>: Favourites, Watchlist, Watched and up to 50 of your own, with mango ratings and TV episode progress.</li>
+        <li><b>Lists</b>: Watchlist, Watched and up to 50 of your own, with 👎 👍 ❤️ ratings, TV episode progress, and sorting and filters.</li>
+        <li><b>Discover</b>: browse any genre, see everything an actor or director made, and try world picks and a new language every week.</li>
         <li><b>Your own titles</b>: add films and shows that aren’t on TMDB, like old serials or home videos.</li>
         <li><b>Import and export</b>: bring lists in from Markdown, IMDb or Letterboxd, and take them out as Markdown any time.</li>
         <li><b>Sync</b>: back up to your own Google Drive and use it on your phone and computer.</li>

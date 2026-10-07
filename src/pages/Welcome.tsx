@@ -14,7 +14,7 @@ import { driveConfigured } from '../sync/google';
 import { connectDrive } from '../sync/sync';
 import { Wordmark } from '../components/Logo';
 import { Poster } from '../components/PosterCard';
-import { toggleList } from '../db/items';
+import { setRating } from '../db/items';
 import { saveSettings, useSettings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
 import { detectLocale, LANGUAGES, languageName } from '../lib/languages';
@@ -22,8 +22,8 @@ import { resolveProviderIds, SERVICES } from '../lib/providers';
 import { dailyJitter } from '../reco/score';
 import type { MediaType } from '../lib/types';
 
-const STEPS = ['Welcome', 'Google Drive', 'TMDB key', 'You', 'Favourites', 'AI'];
-const STEP = { welcome: 0, drive: 1, tmdb: 2, you: 3, favourites: 4, ai: 5 };
+const STEPS = ['Welcome', 'Google Drive', 'TMDB key', 'You', 'Loved', 'AI'];
+const STEP = { welcome: 0, drive: 1, tmdb: 2, you: 3, loved: 4, ai: 5 };
 const TARGET = 10;
 
 type Tile = TmdbListItem & { type: MediaType };
@@ -163,16 +163,16 @@ export default function Welcome() {
 
   const langs = languages ?? (settings?.onboarded ? settings.languages : detected.languages);
   const svcs = services ?? settings?.services ?? [];
-  const tiles = useQuery({ queryKey: ['onboarding-tiles', langs, svcs], queryFn: () => loadTiles(langs, svcs), enabled: step === STEP.favourites });
+  const tiles = useQuery({ queryKey: ['onboarding-tiles', langs, svcs], queryFn: () => loadTiles(langs, svcs), enabled: step === STEP.loved });
 
   if (!settings) return null;
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
   const finish = async () => {
     setSaving(true);
-    for (const t of picked.values()) await toggleList(snapshotFromList(t, t.type), 'favourite', true);
+    for (const t of picked.values()) await setRating(snapshotFromList(t, t.type), 'love');
     await saveSettings({ onboarded: true });
-    trackEvent('onboarding_done', { favourites: picked.size, languages: langs.length });
+    trackEvent('onboarding_done', { loved: picked.size, languages: langs.length });
     navigate('/tonight', { replace: true });
   };
 
@@ -282,7 +282,7 @@ export default function Welcome() {
               Tap {TARGET} you love
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 1 }}>
-              Popular {langs.map(languageName).join(', ')} titles on your services. Tap the ones you’ve enjoyed; they become your first favourites.
+              Popular {langs.map(languageName).join(', ')} titles on your services. Tap the ones you’ve enjoyed; they’re saved as ❤️ Loved and start your taste profile.
             </Typography>
             <Box sx={{ position: 'sticky', top: 0, zIndex: 2, bgcolor: 'background.default', py: 1.5, display: 'flex', alignItems: 'center', gap: 2 }}>
               <LinearProgress variant="determinate" value={Math.min(100, (picked.size / TARGET) * 100)} sx={{ flex: 1, height: 8, borderRadius: '4px' }} />

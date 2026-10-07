@@ -15,12 +15,12 @@ import CustomTitleView from '../components/CustomTitleView';
 import { useEngine } from '../components/EngineContext';
 import EpisodeTracker from '../components/EpisodeTracker';
 import ListActions from '../components/ListActions';
-import { MangoBadge, MangoRatingPicker } from '../components/Mango';
-import PosterCard, { Poster, PosterRow } from '../components/PosterCard';
+import { MangoBadge } from '../components/Mango';
+import PosterCard, { Poster, PosterRow, ScrollRow } from '../components/PosterCard';
 import ReviewReader from '../components/ReviewReader';
 import ShareButton from '../components/ShareButton';
 import { WhereToWatch } from '../components/WhereToWatch';
-import { setRating, useItem } from '../db/items';
+import { useItem } from '../db/items';
 import { useSettings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
 import { safeFilename, titleToText } from '../lib/exportText';
@@ -74,7 +74,8 @@ function TmdbTitle() {
   const region = d['watch/providers']?.results?.[settings.region];
   const availability = availabilityFrom(region);
   const cert = certificationOf(d, settings.region);
-  const director = d.credits?.crew.find((c) => c.job === 'Director')?.name ?? d.created_by?.[0]?.name;
+  const directors = type === 'tv' ? (d.created_by ?? []).map((c) => ({ id: c.id, name: c.name })) : (d.credits?.crew ?? []).filter((c) => c.job === 'Director');
+  const director = directors.map((p) => p.name).join(', ') || undefined;
   const cast = d.credits?.cast.slice(0, 12) ?? [];
   const trailer = d.videos?.results.find((v) => v.site === 'YouTube' && v.type === 'Trailer' && v.official) ?? d.videos?.results.find((v) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'));
   const recs = (d.recommendations?.results ?? []).filter((r) => r.poster_path).slice(0, 18);
@@ -159,12 +160,20 @@ function TmdbTitle() {
             {snap.voteAverage ? <Chip size="small" label={`TMDB ${snap.voteAverage.toFixed(1)}`} color="secondary" /> : null}
             {review.data?.rating && <MangoBadge rating={review.data.rating} size="small" label={`Mangoidiots: ${review.data.rating[0].toUpperCase()}${review.data.rating.slice(1)}`} />}
             {d.genres.map((g) => (
-              <Chip key={g.id} size="small" label={g.name} variant="outlined" />
+              <Chip key={g.id} size="small" label={g.name} variant="outlined" clickable component={RouterLink} to={`/browse/${type}?genre=${g.id}`} />
             ))}
           </Box>
-          {director && (
+          {directors.length > 0 && (
             <Typography variant="body2" sx={{ mt: 1.5 }}>
-              {type === 'tv' ? 'Created by' : 'Directed by'} <b>{director}</b>
+              {type === 'tv' ? 'Created by' : 'Directed by'}{' '}
+              {directors.map((p, i) => (
+                <span key={p.id}>
+                  {i > 0 && ', '}
+                  <Link component={RouterLink} to={`/person/${p.id}`} sx={{ fontWeight: 700 }}>
+                    {p.name}
+                  </Link>
+                </span>
+              ))}
             </Typography>
           )}
 
@@ -184,12 +193,6 @@ function TmdbTitle() {
 
       <SectionTitle>Where to watch in India</SectionTitle>
       <WhereToWatch availability={availability} title={snap.title} myServices={settings.services} justWatchLink={region?.link} />
-
-      <SectionTitle>Your rating</SectionTitle>
-      <MangoRatingPicker value={item?.rating} onChange={(r) => setRating(snap, r).then(() => trackEvent('rate', { rating: r ?? 'none' }))} />
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-        Rating a title also marks it as watched, and teaches MovieMango your taste.
-      </Typography>
 
       {type === 'tv' && <EpisodeTracker snap={snap} show={d} />}
 
@@ -262,13 +265,13 @@ function TmdbTitle() {
       {cast.length > 0 && (
         <>
           <SectionTitle>Cast</SectionTitle>
-          <Box className="no-scrollbar" sx={{ display: 'flex', gap: 2, overflowX: 'auto', pb: 1 }}>
+          <ScrollRow sx={{ display: 'flex', gap: 2 }}>
             {cast.map((c) => (
-              <Stack key={c.id} sx={{ width: 84, flexShrink: 0, textAlign: 'center', alignItems: 'center' }}>
+              <Stack key={c.id} component={RouterLink} to={`/person/${c.id}`} sx={{ width: 84, flexShrink: 0, textAlign: 'center', alignItems: 'center', color: 'inherit', textDecoration: 'none', '&:hover .name': { textDecoration: 'underline' } }}>
                 <Avatar src={img(c.profile_path, 'w185')} alt="" sx={{ width: 64, height: 64 }}>
                   {c.name[0]}
                 </Avatar>
-                <Typography variant="caption" sx={{ fontWeight: 600, mt: 0.5, lineHeight: 1.2 }}>
+                <Typography className="name" variant="caption" sx={{ fontWeight: 600, mt: 0.5, lineHeight: 1.2 }}>
                   {c.name}
                 </Typography>
                 {c.character && (
@@ -278,7 +281,7 @@ function TmdbTitle() {
                 )}
               </Stack>
             ))}
-          </Box>
+          </ScrollRow>
         </>
       )}
 

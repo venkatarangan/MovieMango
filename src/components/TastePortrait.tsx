@@ -56,7 +56,7 @@ export default function TastePortrait() {
           </>
         ) : (
           <Typography color={settings.portrait ? 'text.primary' : 'text.secondary'}>
-            {settings.portrait || 'Not written yet. Save some favourites and rate what you’ve watched, then let the AI describe your taste, or write it yourself.'}
+            {settings.portrait || 'Not written yet. Tap 👍 or ❤️ on what you’ve watched, then let the AI describe your taste, or write it yourself.'}
           </Typography>
         )}
         {!editing && (

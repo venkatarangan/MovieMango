@@ -14,7 +14,7 @@ import { parseIntent, rerank, type Intent } from '../ai/tasks';
 import type { AiEngine } from '../ai/types';
 import type { Settings } from '../db/settings';
 import { genreName, MOVIE_GENRES, TV_GENRES } from '../lib/genres';
-import { languageName } from '../lib/languages';
+import { languageName, otherLanguages } from '../lib/languages';
 import { availabilityFrom, resolveProviderIds, type Availability } from '../lib/providers';
 import { isCustom, type MangoRating, type MediaType, type TitleSnapshot, type UserItem } from '../lib/types';
 import { formatRuntime } from '../lib/format';
@@ -40,10 +40,12 @@ export interface TonightInput {
   discovery: Discovery;
   audience: Audience;
   type: TypeChoice;
+  /** Look beyond the user's languages (subtitles are fine). */
+  anyLanguage?: boolean;
   freeText?: string;
 }
 
-type Source = 'discover' | 'acclaimed' | 'recommended' | 'serendipity' | 'watchlist' | 'rewatch';
+type Source = 'discover' | 'acclaimed' | 'recommended' | 'serendipity' | 'world' | 'watchlist' | 'rewatch';
 
 interface Candidate {
   snap: TitleSnapshot;
@@ -71,7 +73,7 @@ export interface TonightResult {
   engineUsed: 'ai' | 'basic';
   aiError?: string;
   considered: number;
-  effective: { minutes: Minutes; discovery: Discovery; audience: Audience; type: TypeChoice; want?: Want; languages: string[] };
+  effective: { minutes: Minutes; discovery: Discovery; audience: Audience; type: TypeChoice; want?: Want; languages: string[]; anyLanguage?: boolean };
 }
 
 export type Stage = (text: string) => void;
@@ -139,13 +141,13 @@ export function applyIntent(input: TonightInput, intent: Intent): TonightInput {
 
 function describeProfile(profile: TasteProfile, items: UserItem[], settings: Settings): string {
   const genres = topGenres(profile, 6).map(genreName).join(', ') || 'not known yet';
-  const favs = profile.seeds.slice(0, 8).map((i) => `${i.title}${i.year ? ` (${i.year})` : ''}${i.rating ? ` [${i.rating}]` : ''}`);
-  const dislikes = items.filter((i) => i.rating === 'rotten' || i.feedback === 'never').slice(0, 5).map((i) => i.title);
+  const favs = profile.seeds.slice(0, 8).map((i) => `${i.title}${i.year ? ` (${i.year})` : ''}${i.rating ? ` [${i.rating === 'love' ? 'loved' : 'liked'}]` : ''}`);
+  const dislikes = items.filter((i) => i.rating === 'dislike').slice(0, 5).map((i) => i.title);
   return [
     settings.portrait ? `Taste portrait: ${settings.portrait}` : '',
     `Favourite genres: ${genres}.`,
     `Languages: ${settings.languages.map(languageName).join(', ')}.`,
-    favs.length ? `Loves: ${favs.join('; ')}.` : 'No saved favourites yet.',
+    favs.length ? `Loves: ${favs.join('; ')}.` : 'No loved titles yet.',
     dislikes.length ? `Disliked: ${dislikes.join('; ')}.` : '',
   ]
     .filter(Boolean)
@@ -156,7 +158,8 @@ function basicWhy(c: Candidate, input: TonightInput): string {
   const parts: string[] = [];
   if (c.sources.has('watchlist')) parts.push('It’s on your watchlist');
   else if (c.because) parts.push(`Because you loved ${c.because}`);
-  else if (c.sources.has('rewatch')) parts.push('An old favourite');
+  else if (c.sources.has('rewatch')) parts.push('One you loved');
+  else if (c.sources.has('world')) parts.push(`A ${languageName(c.snap.originalLanguage)} gem from beyond your usual languages`);
   else if (c.sources.has('serendipity')) parts.push('A well-loved pick off your usual path');
   const genres = c.snap.genreIds.slice(0, 2).map(genreName).join(' / ').toLowerCase();
   if (genres) parts.push(`${/^[aeiou]/.test(genres) ? 'an' : 'a'} ${genres}`);
@@ -196,6 +199,8 @@ export async function planTonight(
   const types = typesFor(input);
   const surprise = input.discovery === 'surprise';
   const rewatch = input.discovery === 'rewatch';
+  // An explicit language in the typed request wins over "any language".
+  const anyLanguage = !!input.anyLanguage && !intent?.languages?.length;
   const certs = settings.showAllRatings ? null : AUDIENCE_CERTS[input.audience];
 
   stage('Checking what’s streaming on your services…');
@@ -219,7 +224,7 @@ export async function planTonight(
 
   stage('Gathering candidates…');
   if (rewatch) {
-    for (const i of items) if (types.includes(i.type) && (i.lists.includes('favourite') || i.rating === 'delicious' || i.rating === 'ripe')) add(i, i.type, 'rewatch');
+    for (const i of items) if (types.includes(i.type) && (i.rating === 'love' || i.rating === 'like')) add(i, i.type, 'rewatch');
   } else {
     const jobs: Promise<void>[] = [];
     for (const type of types) {
@@ -230,7 +235,7 @@ export async function planTonight(
         watch_region: settings.region,
         with_watch_providers: myProviders.join('|'),
         with_watch_monetization_types: 'flatrate|free|ads',
-        with_original_language: languages.join('|'),
+        with_original_language: anyLanguage ? undefined : languages.join('|'),
         without_genres: without || undefined,
         'with_runtime.lte': input.minutes === 'binge' ? undefined : input.minutes + 10,
         'with_runtime.gte': type === 'movie' && input.minutes !== 30 ? 40 : undefined,
@@ -250,6 +255,8 @@ export async function planTonight(
         const page = 2 + Math.floor(dailyJitter(types.length * 7) * 5);
         run('serendipity', { with_genres: kidsTv, sort_by: 'vote_average.desc', 'vote_count.gte': 300, page });
       }
+      // Without this, "any language" is mostly English: popularity favours Hollywood.
+      if (anyLanguage) run('world', { with_genres: withGenres, with_original_language: otherLanguages(languages).join('|'), sort_by: 'vote_average.desc', 'vote_count.gte': 100, page: 1 });
     }
     const seeds = profile.seeds.filter((s) => types.includes(s.type) && !isCustom(s));
     const picked = [...seeds.slice(0, 3), ...seeds.slice(3, 12).sort((a, b) => dailyJitter(a.tmdbId) - dailyJitter(b.tmdbId)).slice(0, 2)];
@@ -267,16 +274,16 @@ export async function planTonight(
   const allowedLang = new Set(languages);
   const candidates = [...pool.values()].filter((c) => {
     const saved = byKey.get(`${c.snap.type}:${c.snap.tmdbId}`);
-    if (saved?.feedback === 'never') return false;
+    if (saved?.rating === 'dislike') return false;
     if (saved?.notTonightUntil && saved.notTonightUntil > now) return false;
     if (!rewatch && saved?.lists.includes('watched')) return false;
-    if (!rewatch && !surprise && c.snap.originalLanguage && !allowedLang.has(c.snap.originalLanguage)) return false;
+    if (!rewatch && !surprise && !anyLanguage && c.snap.originalLanguage && !allowedLang.has(c.snap.originalLanguage)) return false;
     if (c.snap.genreIds.some((g) => avoidGenres.includes(g))) return false;
     return true;
   });
 
   const bonus = (c: Candidate) =>
-    (c.sources.has('watchlist') ? 0.12 : 0) + (c.sources.has('recommended') ? 0.08 : 0) + (c.sources.has('serendipity') && surprise ? 0.1 : 0) + (c.sources.size - 1) * 0.03;
+    (c.sources.has('watchlist') ? 0.12 : 0) + (c.sources.has('recommended') ? 0.08 : 0) + (c.sources.has('serendipity') && surprise ? 0.1 : 0) + (c.sources.has('world') ? 0.06 : 0) + (c.sources.size - 1) * 0.03;
   const scoreAll = (list: Candidate[]) => {
     for (const c of list) c.score = totalScore({ snap: c.snap, profile, want: input.want, minutes: input.minutes, surprise, bonus: bonus(c) });
     return list.sort((a, b) => b.score - a.score);
@@ -320,7 +327,7 @@ export async function planTonight(
     finalists.sort((a, b) => b.score - a.score);
   }
 
-  const effective = { minutes: input.minutes, discovery: input.discovery, audience: input.audience, type: input.type, want: input.want, languages };
+  const effective = { minutes: input.minutes, discovery: input.discovery, audience: input.audience, type: input.type, want: input.want, languages, anyLanguage };
   const toPick = (c: Candidate, why: string, wildcard = false): Pick => ({
     snap: c.snap,
     overview: c.overview,
@@ -343,7 +350,7 @@ export async function planTonight(
       const context = `VIEWER\n${describeProfile(profile, items, settings)}
 
 RIGHT NOW: ${date.toLocaleDateString('en-IN', { weekday: 'long' })} ${partOfDay(date)}, ${date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}.
-Time available: ${input.minutes === 'binge' ? 'wants a series to binge' : formatRuntime(input.minutes)}. Feeling: ${input.moodNow ?? 'not said'}. Wants to: ${input.want ?? 'not said'}. Watching with: ${input.audience}. Wants: ${input.discovery === 'new' ? 'something new' : input.discovery === 'rewatch' ? 'a rewatch' : 'a surprise'}.${input.freeText ? `\nThey said: "${input.freeText}"` : ''}${news}`;
+Time available: ${input.minutes === 'binge' ? 'wants a series to binge' : formatRuntime(input.minutes)}. Feeling: ${input.moodNow ?? 'not said'}. Wants to: ${input.want ?? 'not said'}. Watching with: ${input.audience}. Wants: ${input.discovery === 'new' ? 'something new' : input.discovery === 'rewatch' ? 'a rewatch' : 'a surprise'}.${anyLanguage ? ' Happy to watch in any language with subtitles.' : ''}${input.freeText ? `\nThey said: "${input.freeText}"` : ''}${news}`;
       const lines = finalists.map((c, i) => ({
         n: i + 1,
         line: [
@@ -375,7 +382,7 @@ Time available: ${input.minutes === 'binge' ? 'wants a series to binge' : format
 /** Compact summary of saved titles, for the AI taste portrait. */
 export function tasteSummaryForPortrait(items: UserItem[]): string {
   const profile = buildProfile(items);
-  const lines = profile.seeds.slice(0, 25).map((i) => `${i.title}${i.year ? ` (${i.year})` : ''} – ${languageName(i.originalLanguage)}, ${i.genreIds.slice(0, 3).map(genreName).join('/')}${i.rating ? `, rated ${i.rating}` : ''}${i.lists.includes('favourite') ? ', favourite' : ''}`);
-  const disliked = items.filter((i) => i.rating === 'rotten' || i.feedback === 'never').slice(0, 10).map((i) => i.title);
+  const lines = profile.seeds.slice(0, 25).map((i) => `${i.title}${i.year ? ` (${i.year})` : ''} – ${languageName(i.originalLanguage)}, ${i.genreIds.slice(0, 3).map(genreName).join('/')}${i.rating ? `, ${i.rating === 'love' ? 'loved' : 'liked'}` : ''}`);
+  const disliked = items.filter((i) => i.rating === 'dislike').slice(0, 10).map((i) => i.title);
   return `Saved titles:\n${lines.join('\n') || '(none yet)'}\n${disliked.length ? `Disliked: ${disliked.join(', ')}` : ''}`;
 }

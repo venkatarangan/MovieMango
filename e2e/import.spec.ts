@@ -1,27 +1,7 @@
-import { expect, test, type Page } from '@playwright/test';
-import { mockApis } from './fixtures';
+import { expect, test } from '@playwright/test';
+import { mockApis, seedOnboarded } from './fixtures';
 
 const shot = (name: string, project: string) => `test-results/screens/${project}-${name}.png`;
-
-/** Skips onboarding: writes settings straight into the app's IndexedDB, then reloads. */
-async function seedOnboarded(page: Page) {
-  await page.goto('/#/about');
-  await expect(page.getByText(/This product uses the TMDB API/)).toBeVisible();
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const open = indexedDB.open('moviemango');
-        open.onsuccess = () => {
-          const tx = open.result.transaction('kv', 'readwrite');
-          tx.objectStore('kv').put({ key: 'settings', value: { onboarded: true, tmdbToken: 'eyJ' + 'a'.repeat(80), aiEngine: 'basic' } });
-          tx.oncomplete = () => (open.result.close(), resolve());
-          tx.onerror = () => reject(tx.error);
-        };
-        open.onerror = () => reject(open.error);
-      }),
-  );
-  await page.reload();
-}
 
 const SAMPLE = `# Watchlist
 - Madras Nights (2003) · movie
@@ -29,7 +9,7 @@ const SAMPLE = `# Watchlist
 - Some Unknown Film zzz (2011) · movie
 
 ## 🌧️ Rainy day comfort
-- Tea Estate (2019) · movie · rating: delicious
+- Tea Estate (2019) · movie · rating: love
 - Anything · imdb: tt0000105`;
 
 test('custom titles, Markdown import and export', async ({ page }, info) => {
@@ -59,7 +39,7 @@ test('custom titles, Markdown import and export', async ({ page }, info) => {
   await expect(dialog.getByRole('button', { name: 'Add title' })).toBeDisabled();
   await dialog.getByLabel('Link for more information').fill('https://example.com/wedding');
   await dialog.getByRole('combobox', { name: 'Add to' }).click();
-  await page.getByRole('option', { name: 'Favourites' }).click();
+  await page.getByRole('option', { name: 'Watched' }).click();
   await expect(page.getByRole('listbox')).toBeHidden();
   await page.screenshot({ path: shot('30-custom-dialog', p), fullPage: true });
   await dialog.getByRole('button', { name: 'Add title' }).click();
@@ -69,8 +49,8 @@ test('custom titles, Markdown import and export', async ({ page }, info) => {
   await expect(page.getByText('எங்கள் திருமணம்').first()).toBeVisible();
   await expect(page.getByText('Added by you · not in TMDB')).toBeVisible();
   await expect(page.getByRole('link', { name: 'example.com' })).toHaveAttribute('href', 'https://example.com/wedding');
-  await expect(page.getByRole('button', { name: 'Favourite' })).toBeVisible();
-  await page.getByRole('button', { name: /^🥭 ?Ripe$/ }).click();
+  await expect(page.getByRole('button', { name: 'Watched' })).toHaveClass(/MuiButton-contained/);
+  await page.getByRole('button', { name: 'Liked it' }).click();
   await page.getByRole('button', { name: 'Edit' }).click();
   await page.getByRole('dialog').getByLabel('Year').fill('2019');
   await page.getByRole('dialog').getByRole('button', { name: 'Save' }).click();
@@ -108,8 +88,10 @@ test('custom titles, Markdown import and export', async ({ page }, info) => {
   await page.getByRole('link', { name: 'Open your library' }).click();
   await page.getByRole('tab', { name: 'Watchlist' }).click();
   for (const t of ['Madras Nights', 'Starfall 12', 'Some Unknown Film zzz']) await expect(page.getByText(t, { exact: true }).last()).toBeVisible();
-  await page.getByRole('tab', { name: 'Favourites' }).click();
+  await page.getByRole('tab', { name: 'Watched' }).click();
   await expect(page.getByText('Our Wedding Video', { exact: true }).first()).toBeVisible();
+  // Tea Estate came in as ❤️, which also means watched.
+  await expect(page.getByText(/^Tea Estate/).first()).toBeVisible();
   await expect(page.getByText('Custom', { exact: true })).toBeVisible();
   await page.screenshot({ path: shot('35-library-custom', p), fullPage: true });
   await page.getByRole('tab', { name: 'My lists' }).click();
@@ -133,7 +115,7 @@ test('custom titles, Markdown import and export', async ({ page }, info) => {
     expect(md).toContain('not endorsed or certified by TMDB');
     expect(md).toContain('# Watchlist\n- ');
     expect(md).toContain('- Madras Nights (2003) · movie · tmdb: 103');
-    expect(md).toContain('- Our Wedding Video (2019) · movie · rating: ripe · custom · original: எங்கள் திருமணம் · genres: Family · director: Appa · cast: Amma, Paati, Me · url: https://example.com/wedding\n  > Shot on VHS in Madurai.');
+    expect(md).toContain('- Our Wedding Video (2019) · movie · rating: like · custom · original: எங்கள் திருமணம் · genres: Family · director: Appa · cast: Amma, Paati, Me · url: https://example.com/wedding\n  > Shot on VHS in Madurai.');
     expect(md).toContain('# 🌧️ Rainy day comfort');
   } else {
     await expect(page.getByRole('menuitem', { name: /Share as Markdown/ })).toBeVisible();

@@ -2,12 +2,12 @@ import { APP_URL, CREDITS } from './exportText';
 import { MOVIE_GENRES, TV_GENRES, genreName } from './genres';
 import { LANGUAGES } from './languages';
 import { safeUrl, splitNames } from './custom';
-import { isCustom, type BuiltinList, type MangoRating, type MediaType, type UserItem } from './types';
+import { isCustom, type BuiltinList, type MediaType, type MyRating, type UserItem } from './types';
 
 /**
  * MovieMango Markdown: headings name lists, bullets are titles.
  *   # Watchlist
- *   - Kaithi (2019) · movie · rating: ripe · tmdb: 550776
+ *   - Kaithi (2019) · movie · rating: like · tmdb: 550776
  *   - My Home Video (2021) · movie · custom · url: https://example.com
  *     > A description line for a custom title.
  * The parser is lenient: numbered lists, tables, "Title - 2019", links, IMDb ids and trailing notes all work.
@@ -19,12 +19,12 @@ export interface MdRow {
   /** 1-based line number in the source. */
   line: number;
   raw: string;
-  /** 'favourite' | 'watchlist' | 'watched', or a custom list's heading as written. */
+  /** An ImportList ('watchlist', 'watched', 'loved', 'notforme'), or a custom list's heading as written. */
   list: string;
   title: string;
   year?: number;
   type?: MediaType;
-  rating?: MangoRating;
+  rating?: MyRating;
   tmdbId?: number;
   imdbId?: string;
   custom?: boolean;
@@ -45,16 +45,29 @@ export interface MdParseResult {
   truncated: boolean;
 }
 
-const MANGO: MangoRating[] = ['rotten', 'raw', 'ripe', 'delicious'];
+/**
+ * Built-in lists, plus two headings that set a rating instead: "Loved" means watched and ❤️
+ * ("Favorites" lists from other apps count as Loved); "Not for me" means 👎.
+ */
+export type ImportList = BuiltinList | 'loved' | 'notforme';
+export const IMPORT_LISTS: ImportList[] = ['watchlist', 'watched', 'loved', 'notforme'];
 
-const BUILTIN_HEADINGS: [BuiltinList, RegExp][] = [
-  ['favourite', /^(my )?(all time )?(favou?rites?|faves?|loved)$/],
+/** The list and rating a row ends up with, after its heading. */
+export function resolveImportList(list: string, rating?: MyRating): { list?: string; rating?: MyRating } {
+  if (list === 'loved') return { list: 'watched', rating: rating ?? 'love' };
+  if (list === 'notforme') return { rating: rating ?? 'dislike' };
+  return { list, rating };
+}
+
+const BUILTIN_HEADINGS: [ImportList, RegExp][] = [
+  ['loved', /^(my )?(all time )?(favou?rites?|faves?|loved|loved it)$/],
   ['watchlist', /^(my )?(watch ?list|to ?watch|want to watch|plan to watch|watch later|queue)$/],
   ['watched', /^(my )?(watched|seen|already watched|finished|completed|diary|ratings?|rated)$/],
+  ['notforme', /^(not for me|disliked?|dislikes|never|not interested)$/],
 ];
 
 /** Maps a heading like "My Favorites" or "To watch" to a built-in list. */
-export function builtinListFor(heading: string): BuiltinList | undefined {
+export function builtinListFor(heading: string): ImportList | undefined {
   const h = heading.toLowerCase().replace(/[^\p{L}\p{N} -]/gu, ' ').replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
   return BUILTIN_HEADINGS.find(([, re]) => re.test(h))?.[0];
 }
@@ -66,7 +79,7 @@ type Field = 'title' | 'rating' | 'tmdb' | 'imdb' | 'type' | 'year' | 'url' | 'o
 const KEYS: Record<string, Field> = {};
 const alias = (field: Field, names: string[]) => names.forEach((n) => (KEYS[n] = field));
 alias('title', ['title', 'name', 'film', 'movie', 'show', 'series', 'film title', 'movie title']);
-alias('rating', ['rating', 'my rating', 'your rating', 'mango', 'score', 'stars']);
+alias('rating', ['rating', 'my rating', 'your rating', 'score', 'stars']);
 alias('tmdb', ['tmdb', 'tmdb id', 'tmdbid', 'tmdb_id']);
 alias('imdb', ['imdb', 'imdb id', 'imdbid', 'imdb_id', 'const']);
 alias('type', ['type', 'kind', 'media', 'media type', 'title type']);
@@ -94,14 +107,27 @@ function typeFrom(v: string): MediaType | undefined {
   return undefined;
 }
 
-const fromFraction = (f: number): MangoRating => (f >= 0.85 ? 'delicious' : f >= 0.65 ? 'ripe' : f >= 0.45 ? 'raw' : 'rotten');
+/** A middling score (3/5, 5/10) gives no rating: watched, without a verdict. */
+const fromFraction = (f: number): MyRating | undefined => (f >= 0.85 ? 'love' : f >= 0.65 ? 'like' : f >= 0.45 ? undefined : 'dislike');
 
-/** Mango words, stars (★★★½), "8/10", "4/5" or a bare number (≤5 means out of 5, else out of 10). */
-export function ratingFrom(v: string): MangoRating | undefined {
-  const s = v.toLowerCase().replace(/🥭/gu, '').trim();
+/** Rating words and emoji ("meh" means watched, with no rating). */
+const RATING_WORDS: [string[], MyRating | undefined][] = [
+  [['love', 'loved', 'loved it', '❤️ loved it', '❤️', '❤', '♥', '♥️', '👍👍'], 'love'],
+  [['like', 'liked', 'liked it', '👍 liked it', 'good', '👍'], 'like'],
+  [['dislike', 'disliked', 'not for me', '👎 not for me', 'bad', '👎'], 'dislike'],
+  [['meh', 'ok', 'okay'], undefined],
+];
+
+const clean = (v: string) => v.toLowerCase().replace(/\s+/g, ' ').trim();
+/** Exact word or emoji, e.g. "love", "👍", "❤️ Loved it". */
+const ratingWord = (s: string) => RATING_WORDS.find(([words]) => words.includes(s));
+
+/** 👎 👍 ❤️ words, stars (★★★½), "8/10", "4/5" or a bare number (≤5 means out of 5, else out of 10). */
+export function ratingFrom(v: string): MyRating | undefined {
+  const s = clean(v);
   if (!s) return undefined;
-  const word = MANGO.find((r) => new RegExp(`\\b${r}\\b`).test(s));
-  if (word) return word;
+  const word = ratingWord(s) ?? RATING_WORDS.find(([words]) => words.some((w) => /^[a-z ]+$/.test(w) && new RegExp(`\\b${w}\\b`).test(s)));
+  if (word) return word[1];
   const stars = (v.match(/★/g)?.length ?? 0) + (v.includes('½') ? 0.5 : 0);
   if (stars) return fromFraction(stars / 5);
   const m = s.match(/^(\d+(?:\.\d+)?)\s*(?:(?:\/|out of)\s*(\d+))?$/);
@@ -210,7 +236,7 @@ function applyField(row: Partial<MdRow>, field: Field, value: string) {
   }
 }
 
-/** A bare segment like "2019", "tv", "Ripe 🥭", "Tamil", "2h 10m", "tt0111161" or "custom". Returns false if it means nothing. */
+/** A bare segment like "2019", "tv", "👍", "Tamil", "2h 10m", "tt0111161" or "custom". Returns false if it means nothing. */
 function applyToken(row: Partial<MdRow>, seg: string): boolean {
   const s = seg.trim().replace(/^\((.*)\)$/, '$1').trim();
   const year = s.match(/^((?:18|19|20)\d\d)(?:\s*[–-]\s*(?:(?:18|19|20)\d\d)?)?$/);
@@ -219,8 +245,7 @@ function applyToken(row: Partial<MdRow>, seg: string): boolean {
   if (type) return ((row.type ??= type), true);
   if (/^custom$/i.test(s)) return ((row.custom = true), true);
   if (/^tt\d{6,}$/.test(s)) return ((row.imdbId ??= s), true);
-  const mango = s.toLowerCase().replace(/🥭/gu, '').trim();
-  if (MANGO.includes(mango as MangoRating) || /^[★☆½]+$/.test(s) || /^\d+(\.\d)?\s*\/\s*(5|10)$/.test(s)) return ((row.rating ??= ratingFrom(s)), true);
+  if (ratingWord(clean(s)) || /^[★☆½]+$/.test(s) || /^\d+(\.\d)?\s*\/\s*(5|10)$/.test(s)) return ((row.rating ??= ratingFrom(s)), true);
   const lang = LANGUAGES.find((l) => l.name.toLowerCase() === s.toLowerCase() || l.native === s);
   if (lang) return ((row.originalLanguage ??= lang.code), true);
   if (/\d/.test(s) && /[hm]/i.test(s) && runtimeFrom(s)) return ((row.runtime ??= runtimeFrom(s)), true);
@@ -442,7 +467,7 @@ export function itemToMarkdown(item: UserItem): string {
 export function markdownHeader(date = new Date()) {
   return [
     `<!-- MovieMango export · ${date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · ${APP_URL}`,
-    'Each heading is a list. Each line is a title: "- Title (year) · movie|tv · rating: rotten|raw|ripe|delicious · tmdb: id".',
+    'Each heading is a list. Each line is a title: "- Title (year) · movie|tv · rating: dislike|like|love · tmdb: id".',
     'Edit it by hand or with an AI, then bring it back on the Import page.',
     `${CREDITS} -->`,
   ].join('\n');
@@ -456,12 +481,13 @@ export function listsToMarkdown(sections: { name: string; items: UserItem[] }[],
 
 export const MARKDOWN_SAMPLE = `# Watchlist
 - Kaithi (2019) · movie
-- Paatal Lok (2020) · tv · rating: ripe
+- Paatal Lok (2020) · tv
 - Super Deluxe (2019) · movie · tmdb: 550776
 - The Shawshank Redemption · imdb: tt0111161
 
 # Watched
-- Jailer (2023) · movie · rating: delicious
+- Jailer (2023) · movie · rating: love
+- Kaathal (2023) · movie · rating: like
 
 ## Rainy day comfort
 - Om Shanti Om (2007)
@@ -471,8 +497,8 @@ export const MARKDOWN_SAMPLE = `# Watchlist
 export const AI_PROMPT = `Convert my list below into MovieMango Markdown.
 Rules:
 - One title per line: "- Title (Year) · movie" or "- Title (Year) · tv".
-- Put titles under a heading for their list: "# Watchlist", "# Watched", "# Favourites", or another name for my own list.
-- If I rated a title, add "· rating: " and one of rotten (bad), raw (meh), ripe (good) or delicious (loved it). Map 1–10 or 1–5 star ratings to these.
+- Put titles under a heading for their list: "# Watchlist", "# Watched", "# Not for me", or another name for my own list.
+- If I rated a title, add "· rating: " and one of dislike, like or love. Map star ratings: top marks are love, good is like, bad is dislike, middling gets no rating.
 - If an IMDb ID (tt…) or TMDB ID is given, add "· imdb: tt…" or "· tmdb: 123".
 - Don't add titles that aren't in my list, and don't guess missing years.
 - Reply with the Markdown only.

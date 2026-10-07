@@ -39,7 +39,7 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await expect(tiles.first()).toBeVisible();
   for (let i = 0; i < 10; i++) await tiles.nth(i).click();
   await expect(page.getByText('10/10')).toBeVisible();
-  await page.screenshot({ path: shot('04-favourites', p) });
+  await page.screenshot({ path: shot('04-loved', p) });
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await expect(page.getByText('Meet your AI movie buff')).toBeVisible();
@@ -82,7 +82,9 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await expect(page.getByRole('heading', { name: 'Madras Nights', exact: true })).toBeVisible();
   await expect(page.getByText('Where to watch in India')).toBeVisible();
   await expect(page.getByText(/Madras Nights \(2003\), a slow-burn treat/)).toBeVisible();
-  await page.getByRole('button', { name: /^🥭 ?Ripe$/ }).click();
+  await page.getByRole('button', { name: 'Liked it' }).click();
+  await expect(page.getByText(/👍 Liked, and marked as watched/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Watched' })).toHaveClass(/MuiButton-contained/);
   await page.screenshot({ path: shot('08-title', p), fullPage: true });
   await page.getByRole('button', { name: 'Read full review' }).click();
   await expect(page.getByText('What works')).toBeVisible();
@@ -90,8 +92,9 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await page.getByRole('button', { name: 'Close' }).click();
 
   // Changes reach Drive: a debounced sync, or immediately via the header's sync button.
-  await page.getByRole('button', { name: /Sync|Synced/ }).first().click();
-  await expect.poll(() => (drive.file as { items?: { lists: string[] }[] } | null)?.items?.filter((i) => i.lists.includes('favourite')).length ?? 0).toBeGreaterThanOrEqual(10);
+  await page.getByRole('button', { name: /sync/i }).first().click();
+  // The 10 onboarding picks are ❤️ (one may now be 👍 from the title page above).
+  await expect.poll(() => (drive.file as { items?: { rating?: string }[] } | null)?.items?.filter((i) => i.rating === 'love' || i.rating === 'like').length ?? 0).toBeGreaterThanOrEqual(10);
 
   await page.goto('/#/library');
   await expect(page.getByRole('heading', { name: 'Your library' })).toBeVisible();
@@ -128,7 +131,7 @@ test('returning user restores everything from Google Drive on a new device', asy
   await mockApis(page);
   const favs = [101, 102, 103, 104, 105, 106].map((id) => {
     const t = title(id);
-    return { key: `movie:${id}`, tmdbId: id, type: 'movie', title: t.title, year: 2020, posterPath: t.poster_path, genreIds: t.genre_ids, originalLanguage: t.original_language, lists: ['favourite'], addedAt: 1, updatedAt: 1 };
+    return { key: `movie:${id}`, tmdbId: id, type: 'movie', title: t.title, year: 2020, posterPath: t.poster_path, genreIds: t.genre_ids, originalLanguage: t.original_language, lists: id === 106 ? [] : ['watched'], rating: id === 106 ? 'dislike' : 'love', addedAt: 1, updatedAt: 1 };
   });
   await mockGoogle(page, {
     app: 'MovieMango',
@@ -144,11 +147,15 @@ test('returning user restores everything from Google Drive on a new device', asy
   await page.getByRole('button', { name: 'Sign in with Google' }).click();
   await expect(page.getByText(/Welcome back! We brought over 6 titles and 1 list/)).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
-  // Key, languages and favourites came from Drive, so setup jumps straight to the AI step.
+  // Key, languages and loved titles came from Drive, so setup jumps straight to the AI step.
   await expect(page.getByText('Meet your AI movie buff')).toBeVisible();
   await page.getByRole('button', { name: /Show me tonight/ }).click();
   await page.goto('/#/library');
   await expect(page.getByText('You love quiet Malayalam dramas.')).toBeVisible();
+  await page.getByRole('tab', { name: /Loved/ }).click();
+  await expect(page.getByText('All · 5')).toBeVisible();
+  await page.getByRole('tab', { name: /Not for me/ }).click();
+  await expect(page.getByText(title(106).title, { exact: true })).toBeVisible();
   await page.goto('/#/settings');
   await expect(page.getByText(/Connected as tester@example.com/)).toBeVisible();
   await expect(page.getByRole('checkbox', { name: 'Sun NXT' })).toHaveAttribute('aria-checked', 'true');

@@ -11,13 +11,12 @@ export interface TasteProfile {
   signal: number;
 }
 
-const RATING_WEIGHT = { delicious: 3, ripe: 2, raw: -0.5, rotten: -2 } as const;
+const RATING_WEIGHT = { love: 3, like: 2 } as const;
 
-/** How strongly a saved title speaks for (or against) the user's taste. */
+/** How strongly a saved title speaks for (or against) the user's taste: ❤️ 3, 👍 2, watched 1, watchlist +1, 👎 −2. */
 export function itemWeight(item: UserItem): number {
-  if (item.feedback === 'never') return -2;
+  if (item.rating === 'dislike') return -2;
   let w = 0;
-  if (item.lists.includes('favourite')) w += 3;
   if (item.rating) w += RATING_WEIGHT[item.rating];
   else if (item.lists.includes('watched')) w += 1;
   if (item.lists.includes('watchlist')) w += 1;

@@ -3,8 +3,8 @@ import { db } from '../db';
 import { createList, importItem } from '../db/items';
 import { customSnapshot } from './custom';
 import { normTitle } from './importMatch';
-import type { MdRow } from './markdown';
-import { BUILTIN_LISTS, isCustom, itemKey, type MangoRating, type MediaType, type TitleSnapshot } from './types';
+import { resolveImportList, type MdRow } from './markdown';
+import { BUILTIN_LISTS, isCustom, itemKey, type MediaType, type MyRating, type TitleSnapshot } from './types';
 
 export interface ImportDecision {
   row: MdRow;
@@ -42,7 +42,7 @@ export async function applyImport(decisions: ImportDecision[]): Promise<ImportSu
   const lists = await db.lists.filter((l) => !l.deleted).toArray();
   const byName = new Map(lists.map((l) => [listName(l.name), l.id]));
   const listId = new Map<string, string>();
-  for (const heading of new Set(todo.map((d) => d.row.list))) {
+  for (const heading of new Set(todo.map((d) => resolveImportList(d.row.list).list).filter((l): l is string => !!l))) {
     if ((BUILTIN_LISTS as readonly string[]).includes(heading)) listId.set(heading, heading);
     else if (byName.has(listName(heading))) listId.set(heading, byName.get(listName(heading))!);
     else {
@@ -62,7 +62,7 @@ export async function applyImport(decisions: ImportDecision[]): Promise<ImportSu
   const customs = new Map(
     (await db.items.filter((i) => isCustom(i) && i.lists.length > 0).toArray()).map((i) => [customKey(i.type, i.title, i.year), i.tmdbId]),
   );
-  const groups = new Map<string, { snap: TitleSnapshot; lists: Set<string>; rating?: MangoRating; custom: boolean }>();
+  const groups = new Map<string, { snap: TitleSnapshot; lists: Set<string>; rating?: MyRating; custom: boolean }>();
   for (const { row, pick } of todo) {
     let snap: TitleSnapshot;
     if (pick === 'custom') {
@@ -74,8 +74,9 @@ export async function applyImport(decisions: ImportDecision[]): Promise<ImportSu
     else continue;
     const key = itemKey(snap.type, snap.tmdbId);
     const g = groups.get(key) ?? { snap, lists: new Set<string>(), custom: pick === 'custom' };
-    g.lists.add(listId.get(row.list) ?? 'watchlist');
-    g.rating = row.rating ?? g.rating;
+    const target = resolveImportList(row.list, row.rating);
+    if (target.list) g.lists.add(listId.get(target.list) ?? 'watchlist');
+    g.rating = target.rating ?? g.rating;
     groups.set(key, g);
   }
 

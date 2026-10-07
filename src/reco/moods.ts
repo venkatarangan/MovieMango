@@ -35,7 +35,7 @@ export const MINUTES: { key: Minutes; label: string }[] = [
 
 export const DISCOVERY: { key: Discovery; label: string }[] = [
   { key: 'new', label: 'Something new' },
-  { key: 'rewatch', label: 'Rewatch a favourite' },
+  { key: 'rewatch', label: 'Rewatch one I loved' },
   { key: 'surprise', label: 'Surprise me' },
 ];
 

@@ -17,5 +17,6 @@
 - **Optional hardening:** verify `mangoidiots.com` under GitHub profile → Settings → Pages (adds a TXT record in Cloudflare) so nobody else can claim its subdomains.
 
 ## External accounts
-- **Google Cloud project** (for the OAuth client): not created yet. Steps are in `docs/testing-locally.md`. Publish the consent screen before a public launch; privacy URL `https://watch.mangoidiots.com/privacy.html`.
+- **Google Cloud project** (for the OAuth client): web client created 2026-10-07 and published; brand verification (Branding and Verification Center) still pending, so users see the "unverified app" screen. Setup steps are in `docs/testing-locally.md`; privacy URL `https://watch.mangoidiots.com/privacy.html`.
+- **Drive API quota:** sync is batched (at most 3 calls per sync, backoff on rate limits), and calls cost the owner nothing; data counts against each user's Drive.
 - **TMDB and Gemini:** each user brings their own key; the project holds none.
