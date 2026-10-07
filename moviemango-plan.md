@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -964,3 +964,17 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 - **Docs:** a subagent rewrote README, CHANGELOG, `docs/architecture.md`, `docs/operations.md` and CLAUDE.md in current terms only. `docs/original-prompt.txt` and this log stay verbatim.
 - **Drive sync, batched** (`src/sync/sync.ts`, `src/sync/drive.ts`): the first unsynced change starts a 2-minute window and the whole batch goes up in one sync (later changes don't push it back); pending changes flush when the tab is hidden or closed (small uploads use `keepalive`); returning after 2+ minutes pulls other devices' changes. A sync is at most 3 calls (metadata, download only if the file changed since our last sync, upload only if needed), one at a time. 429, rate-limit 403s and 5xx are retried with exponential backoff and jitter (honouring `Retry-After`), up to 5 tries; a failed batch retries in the next window.
 - **Checked:** typecheck, 107 unit tests (new `tests/drive.test.ts`), 16 Playwright tests (new `e2e/sync.spec.ts` checks one upload per window, no re-download, flush on hide).
+
+---
+
+## 26. Seventeenth-round prompts (verbatim) and response
+
+> include the version in footer for easy glance
+
+> anyway to show the version number on mobile, what is your suggestion? what happens to the footer on mobile?
+
+> yes, do both. test and then committ, publish
+
+- Desktop footer ends with `v0.3.0`, linked to `CHANGELOG.md` on GitHub.
+- Phones had no footer (the fixed tab bar replaces it). Now a short footer ends each page's content: the four pillars, then About · Privacy · Mangoidiots · version. Settings also ends with "MovieMango v0.3.0 · What's new".
+- Checked: typecheck, build, 107 unit tests, 16 Playwright tests, phone screenshots.

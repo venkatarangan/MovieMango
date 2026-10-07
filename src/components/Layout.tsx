@@ -18,6 +18,24 @@ const NAV = [
   { to: '/settings', label: 'Settings', icon: <SettingsRoundedIcon /> },
 ];
 
+const CHANGELOG_URL = `${SOURCE_URL}/blob/main/CHANGELOG.md`;
+
+/** Phones: the bottom tab bar replaces the page footer, so this short one ends each page's content instead. */
+function PhoneFooter() {
+  return (
+    <Box component="footer" sx={{ mt: 5, pt: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+        🔒 Private · 💸 Free · 🔓 Open · 🧠 Local AI by default
+      </Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+        <Link component={RouterLink} to="/about" color="inherit">About</Link> · <Link component={RouterLink} to="/privacy" color="inherit">Privacy</Link> ·{' '}
+        <Link href="https://mangoidiots.com" target="_blank" rel="noopener noreferrer" color="inherit">Mangoidiots</Link> ·{' '}
+        <Link href={CHANGELOG_URL} target="_blank" rel="noopener noreferrer" color="inherit" title="What’s new">v{APP_VERSION}</Link>
+      </Typography>
+    </Box>
+  );
+}
+
 function activeIndex(path: string) {
   if (path === '/' || path.startsWith('/search')) return 0;
   const i = NAV.findIndex((n) => n.to !== '/' && path.startsWith(n.to));
@@ -66,6 +84,7 @@ export default function Layout() {
 
       <Container component="main" maxWidth="lg" sx={{ flex: 1, py: { xs: 2, md: 4 }, px: { xs: 2, sm: 3 }, pb: { xs: 12, md: 4 } }}>
         <Outlet />
+        {!desktop && <PhoneFooter />}
       </Container>
 
       {desktop && (
@@ -74,7 +93,7 @@ export default function Layout() {
             <Typography variant="body2" color="text.secondary">
               🔒 Private · 💸 Free · 🔓 Open · 🧠 Local AI by default — <Link component={RouterLink} to="/about" color="inherit">About</Link> ·{' '}
               <Link component={RouterLink} to="/privacy" color="inherit">Privacy</Link> ·{' '}
-              <Link href={`${SOURCE_URL}/blob/main/CHANGELOG.md`} target="_blank" rel="noopener noreferrer" color="inherit" title="What’s new">
+              <Link href={CHANGELOG_URL} target="_blank" rel="noopener noreferrer" color="inherit" title="What’s new">
                 v{APP_VERSION}
               </Link>
             </Typography>
