@@ -163,12 +163,14 @@ export async function mockApis(page: Page) {
       excerpt: { rendered: '<p>Madras Nights takes its time, and rewards you for it. The performances are lived-in and the city is a character.</p>' },
       content: { rendered: '<p>Madras Nights takes its time, and rewards you for it.</p><h3>What works</h3><p>The performances are lived-in, and the city is a character of its own.</p><p>Verdict: <strong>Ripe</strong>.</p>' },
       tags: [1525],
-      jetpack_featured_media_url: '',
+      jetpack_featured_media_url: 'https://i0.wp.com/venkatarangan.com/cover-1.jpg',
     };
     if (/posts\/\d+/.test(url)) return route.fulfill({ json: post });
     if (url.includes('search=')) return route.fulfill({ json: url.includes('Madras') ? [post] : [] });
     return route.fulfill({ json: [post, { ...post, id: 2, title: { rendered: 'Starfall (2017), all sparkle no soul' }, tags: [1524] }, { ...post, id: 3, title: { rendered: 'Tea Estate (2019), pure comfort' }, tags: [1527] }] });
   });
+  // Review covers are 1550×600, like the real ones.
+  await page.route('https://i0.wp.com/**', (route) => route.fulfill({ contentType: 'image/svg+xml', body: posterSvg(3, 1550, 600) }));
   await page.route('https://www.wikidata.org/**', (route) => route.fulfill({ json: { entities: { Q1: { sitelinks: { enwiki: { title: 'Some Film' } } } } } }));
   await page.route('https://en.wikipedia.org/**', (route) =>
     route.fulfill({ json: { title: 'Some Film', extract: 'Some Film is an Indian drama film. It was well received for its performances and music.', content_urls: { desktop: { page: 'https://en.wikipedia.org/wiki/Some_Film' } }, news: [] } }),

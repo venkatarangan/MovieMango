@@ -1,12 +1,12 @@
-import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import { Box, Button, Card, CardActionArea, CardContent, CircularProgress, Typography } from '@mui/material';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link as RouterLink } from 'react-router';
-import { latestReviews, parseReviewTitle, type ReviewSummary } from '../api/mangoidiots';
+import { latestReviews, type ReviewSummary } from '../api/mangoidiots';
 import { ChipGroup } from '../components/ChipGroup';
 import { EmptyState, ErrorNote } from '../components/common';
 import { MangoBadge } from '../components/Mango';
+import { ReviewCover, ReviewWatchlistButton } from '../components/ReviewCover';
 import ReviewReader from '../components/ReviewReader';
 import { useSettings } from '../db/settings';
 import type { MangoRating } from '../lib/types';
@@ -54,28 +54,23 @@ export default function Reviews() {
         <ErrorNote error={q.error} />
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 2, mt: 2 }}>
-        {reviews.map((r) => {
-          const { name } = parseReviewTitle(r.title);
-          return (
-            <Card key={r.id} variant="outlined" sx={{ borderRadius: '20px', display: 'flex', flexDirection: 'column' }}>
-              <CardActionArea onClick={() => setOpen(r)} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}>
-                {r.poster && <Box component="img" src={r.poster} alt="" loading="lazy" sx={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover' }} />}
-                <CardContent>
-                  {r.rating && <MangoBadge rating={r.rating} size="small" />}
-                  <Typography sx={{ fontWeight: 600, mt: 1, lineHeight: 1.3 }}>{r.title}</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {plain(r.excerptHtml)}
-                  </Typography>
-                </CardContent>
-              </CardActionArea>
-              <Box sx={{ px: 1, pb: 1 }}>
-                <Button size="small" startIcon={<SearchRoundedIcon />} component={RouterLink} to={`/search?q=${encodeURIComponent(name)}`} color="inherit">
-                  Find “{name}”
-                </Button>
-              </Box>
-            </Card>
-          );
-        })}
+        {reviews.map((r) => (
+          <Card key={r.id} variant="outlined" sx={{ borderRadius: '20px', display: 'flex', flexDirection: 'column' }}>
+            <CardActionArea onClick={() => setOpen(r)} sx={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start' }}>
+              {r.poster && <ReviewCover src={r.poster} />}
+              <CardContent>
+                {r.rating && <MangoBadge rating={r.rating} size="small" />}
+                <Typography sx={{ fontWeight: 600, mt: 1, lineHeight: 1.3 }}>{r.title}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {plain(r.excerptHtml)}
+                </Typography>
+              </CardContent>
+            </CardActionArea>
+            <Box sx={{ px: 1, pb: 1 }}>
+              <ReviewWatchlistButton postTitle={r.title} />
+            </Box>
+          </Card>
+        ))}
       </Box>
       {q.isLoading && (
         <Box sx={{ display: 'grid', placeItems: 'center', py: 4 }}>
