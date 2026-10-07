@@ -4,15 +4,18 @@ import { lazy, Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import { EngineProvider } from './components/EngineContext';
 import Layout from './components/Layout';
+import { ItemsProvider } from './components/TitleActions';
 import { ToastProvider } from './components/Toast';
 import { useSettings } from './db/settings';
 import { setAnalytics, trackPage } from './lib/analytics';
 import Home from './pages/Home';
 
 const About = lazy(() => import('./pages/About'));
+const Browse = lazy(() => import('./pages/Browse'));
 const Import = lazy(() => import('./pages/Import'));
 const Library = lazy(() => import('./pages/Library'));
 const ListPage = lazy(() => import('./pages/ListPage'));
+const Person = lazy(() => import('./pages/Person'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Reviews = lazy(() => import('./pages/Reviews'));
 const Search = lazy(() => import('./pages/Search'));
@@ -61,36 +64,40 @@ export default function App() {
       <CssBaseline />
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <EngineProvider>
-            <HashRouter>
-              <PageTracker />
-              {!settings ? (
-                <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <Suspense fallback={<Box sx={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}><CircularProgress /></Box>}>
-                <Routes>
-                  <Route path="/welcome" element={<Welcome />} />
-                  <Route element={<Layout />}>
-                    <Route path="/" element={<RequireSetup><Home /></RequireSetup>} />
-                    <Route path="/tonight" element={<RequireSetup><Tonight /></RequireSetup>} />
-                    <Route path="/search" element={<RequireSetup><Search /></RequireSetup>} />
-                    <Route path="/title/:type/:id" element={<RequireSetup><Title /></RequireSetup>} />
-                    <Route path="/library" element={<RequireSetup><Library /></RequireSetup>} />
-                    <Route path="/list/:listId" element={<RequireSetup><ListPage /></RequireSetup>} />
-                    <Route path="/import" element={<RequireSetup><Import /></RequireSetup>} />
-                    <Route path="/reviews" element={<RequireSetup><Reviews /></RequireSetup>} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/about" element={<About />} />
-                    <Route path="/privacy" element={<Privacy />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Route>
-                </Routes>
-                </Suspense>
-              )}
-            </HashRouter>
-          </EngineProvider>
+          <ItemsProvider>
+            <EngineProvider>
+              <HashRouter>
+                <PageTracker />
+                {!settings ? (
+                  <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  <Suspense fallback={<Box sx={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}><CircularProgress /></Box>}>
+                  <Routes>
+                    <Route path="/welcome" element={<Welcome />} />
+                    <Route element={<Layout />}>
+                      <Route path="/" element={<RequireSetup><Home /></RequireSetup>} />
+                      <Route path="/tonight" element={<RequireSetup><Tonight /></RequireSetup>} />
+                      <Route path="/search" element={<RequireSetup><Search /></RequireSetup>} />
+                      <Route path="/title/:type/:id" element={<RequireSetup><Title /></RequireSetup>} />
+                      <Route path="/browse/:type" element={<RequireSetup><Browse /></RequireSetup>} />
+                      <Route path="/person/:id" element={<RequireSetup><Person /></RequireSetup>} />
+                      <Route path="/library" element={<RequireSetup><Library /></RequireSetup>} />
+                      <Route path="/list/:listId" element={<RequireSetup><ListPage /></RequireSetup>} />
+                      <Route path="/import" element={<RequireSetup><Import /></RequireSetup>} />
+                      <Route path="/reviews" element={<RequireSetup><Reviews /></RequireSetup>} />
+                      <Route path="/settings" element={<SettingsPage />} />
+                      <Route path="/about" element={<About />} />
+                      <Route path="/privacy" element={<Privacy />} />
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Route>
+                  </Routes>
+                  </Suspense>
+                )}
+              </HashRouter>
+            </EngineProvider>
+          </ItemsProvider>
         </ToastProvider>
       </QueryClientProvider>
     </ThemeProvider>

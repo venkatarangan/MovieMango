@@ -7,15 +7,15 @@ const payload = (p: Partial<SyncPayload>): SyncPayload => ({ app: 'MovieMango', 
 
 describe('Drive sync merge', () => {
   it('merges titles newest-wins from both devices', () => {
-    const local = payload({ items: [item('movie:1', 10, ['favourite']), item('movie:2', 5, ['watchlist'])] });
-    const remote = payload({ items: [item('movie:1', 4, []), item('movie:2', 9, ['watched']), item('movie:3', 1, ['favourite'])] });
+    const local = payload({ items: [item('movie:1', 10, ['l_a']), item('movie:2', 5, ['watchlist'])] });
+    const remote = payload({ items: [item('movie:1', 4, []), item('movie:2', 9, ['watched']), item('movie:3', 1, ['l_a'])] });
     const m = mergePayloads(local, remote);
     const byKey = Object.fromEntries(m.items.map((i) => [i.key, i.lists]));
-    expect(byKey).toEqual({ 'movie:1': ['favourite'], 'movie:2': ['watched'], 'movie:3': ['favourite'] });
+    expect(byKey).toEqual({ 'movie:1': ['l_a'], 'movie:2': ['watched'], 'movie:3': ['l_a'] });
   });
 
   it('carries custom titles (negative ids) like any other title', () => {
-    const custom: UserItem = { ...item('movie:-1700000000000001', 8, ['favourite']), title: 'Home Video', custom: { originalTitle: 'வீடு', url: 'https://example.com' } };
+    const custom: UserItem = { ...item('movie:-1700000000000001', 8, ['watchlist']), title: 'Home Video', custom: { originalTitle: 'வீடு', url: 'https://example.com' } };
     const deleted: UserItem = { ...custom, lists: [], updatedAt: 9 };
     const m = mergePayloads(payload({ items: [custom] }), payload({ items: [item('movie:1', 1, ['watchlist'])] }));
     expect(m.items.find((i) => i.tmdbId < 0)).toEqual(custom);
@@ -34,7 +34,7 @@ describe('Drive sync merge', () => {
   });
 
   it('uses local data when Drive is empty, and ignores savedAt when comparing', () => {
-    const local = payload({ items: [item('movie:1', 1, ['favourite'])] });
+    const local = payload({ items: [item('movie:1', 1, ['watched'])] });
     expect(mergePayloads(local, null)).toBe(local);
     expect(sameContent({ ...local, savedAt: 1 }, { ...local, savedAt: 2 })).toBe(true);
     expect(sameContent(null, local)).toBe(false);

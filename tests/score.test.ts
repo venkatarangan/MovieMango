@@ -17,19 +17,20 @@ const item = (p: Partial<UserItem>): UserItem => ({
 });
 
 describe('profile', () => {
-  it('weights favourites and ratings, penalises dislikes', () => {
-    expect(itemWeight(item({ lists: ['favourite'] }))).toBe(3);
-    expect(itemWeight(item({ lists: ['watched'], rating: 'delicious' }))).toBe(3);
+  it('weights ❤️ 👍 and watched, penalises 👎', () => {
+    expect(itemWeight(item({ lists: ['watched'], rating: 'love' }))).toBe(3);
+    expect(itemWeight(item({ lists: ['watched'], rating: 'like' }))).toBe(2);
     expect(itemWeight(item({ lists: ['watched'] }))).toBe(1);
-    expect(itemWeight(item({ rating: 'rotten', lists: ['watched'] }))).toBe(-2);
-    expect(itemWeight(item({ feedback: 'never' }))).toBe(-2);
+    expect(itemWeight(item({ lists: ['watchlist'] }))).toBe(1);
+    expect(itemWeight(item({ rating: 'dislike', lists: ['watched'] }))).toBe(-2);
+    expect(itemWeight(item({ rating: 'dislike' }))).toBe(-2);
   });
 
   it('builds normalised genre and language weights with strongest seeds first', () => {
     const p = buildProfile([
-      item({ tmdbId: 1, genreIds: [53, 80], originalLanguage: 'ta', lists: ['favourite'], rating: 'delicious' }),
+      item({ tmdbId: 1, genreIds: [53, 80], originalLanguage: 'ta', lists: ['watched'], rating: 'love' }),
       item({ tmdbId: 2, genreIds: [35], originalLanguage: 'hi', lists: ['watchlist'] }),
-      item({ tmdbId: 3, genreIds: [27], originalLanguage: 'en', rating: 'rotten', lists: ['watched'] }),
+      item({ tmdbId: 3, genreIds: [27], originalLanguage: 'en', rating: 'dislike', lists: ['watched'] }),
     ]);
     expect(p.genres[53]).toBe(1);
     expect(p.genres[27]).toBeLessThan(0);
@@ -40,7 +41,7 @@ describe('profile', () => {
 });
 
 describe('scoring', () => {
-  const profile = buildProfile([item({ tmdbId: 1, genreIds: [53], originalLanguage: 'ta', lists: ['favourite'] })]);
+  const profile = buildProfile([item({ tmdbId: 1, genreIds: [53], originalLanguage: 'ta', lists: ['watched'], rating: 'love' })]);
 
   it('prefers titles like the favourites', () => {
     const liked = tasteScore({ tmdbId: 9, type: 'movie', title: 'A', genreIds: [53], originalLanguage: 'ta' }, profile);

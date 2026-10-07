@@ -12,9 +12,9 @@ import { listLabel, useCustomLists } from '../db/items';
 import { trackEvent } from '../lib/analytics';
 import { applyImport, type ImportSummary } from '../lib/importApply';
 import { mapPool, matchRow, type Confidence, type RowMatch } from '../lib/importMatch';
-import { AI_PROMPT, MARKDOWN_SAMPLE, MAX_IMPORT_ROWS, parseMarkdown, type MdRow } from '../lib/markdown';
+import { AI_PROMPT, IMPORT_LISTS, MARKDOWN_SAMPLE, MAX_IMPORT_ROWS, parseMarkdown, resolveImportList, type MdRow } from '../lib/markdown';
+import { ratingText } from '../lib/ratings';
 import { copyText } from '../lib/share';
-import { BUILTIN_LISTS } from '../lib/types';
 
 type Choice = number | 'custom' | 'skip';
 interface Entry {
@@ -82,13 +82,13 @@ function Help() {
         <Code text={MARKDOWN_SAMPLE} label="sample" />
         <Box component="ul" sx={{ pl: 2.5, mb: 0, '& li': { mb: 0.5 }, '& code': { fontSize: 13 } }}>
           <Typography component="li" variant="body2">
-            <code># Favourites</code>, <code># Watchlist</code> and <code># Watched</code> fill those lists. Any other heading becomes your own list, made if it’s new.
+            <code># Watchlist</code> and <code># Watched</code> fill those lists. <code># Loved</code> marks titles watched and ❤️; <code># Not for me</code> marks them 👎. Any other heading becomes your own list, made if it’s new.
           </Typography>
           <Typography component="li" variant="body2">
             <code>(2019)</code> and <code>· movie</code> or <code>· tv</code> help find the right title. <code>· tmdb: 550776</code> or <code>· imdb: tt0111161</code> match exactly.
           </Typography>
           <Typography component="li" variant="body2">
-            <code>· rating: rotten</code>, <code>raw</code>, <code>ripe</code> or <code>delicious</code> adds your mango rating.
+            <code>· rating: love</code>, <code>like</code> or <code>dislike</code> adds your ❤️ 👍 👎 rating. Stars and scores (like 4/5 or 8/10) work too.
           </Typography>
           <Typography component="li" variant="body2">
             <code>· custom</code> adds it as your own title, with an optional <code>· url: …</code> and a <code>&gt; description</code> line under it.
@@ -140,7 +140,7 @@ function ReviewRow({ entry, onChoose }: { entry: Entry; onChoose: (c: Choice) =>
             {chip && <Chip size="small" label={chip.label} color={chip.color} variant={chip.color === 'warning' ? 'filled' : 'outlined'} />}
           </Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-            {[...meta.filter(Boolean), `→ ${listTitle(row.list)}`, row.rating && `🥭 ${row.rating}`].filter(Boolean).join(' · ')}
+            {[...meta.filter(Boolean), `→ ${listTitle(row.list)}`, ratingText(resolveImportList(row.list, row.rating).rating)].filter(Boolean).join(' · ')}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.raw}>
             Line {row.line}: {row.raw}
@@ -277,7 +277,7 @@ export default function Import() {
                   Try the sample
                 </Button>
                 <TextField select size="small" label="Titles without a heading go to" value={defaultList} onChange={(e) => setDefaultList(e.target.value)} sx={{ minWidth: 240, ml: { sm: 'auto' } }}>
-                  {BUILTIN_LISTS.map((l) => (
+                  {IMPORT_LISTS.map((l) => (
                     <MenuItem key={l} value={l}>
                       {listLabel[l]}
                     </MenuItem>

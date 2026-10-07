@@ -1,5 +1,5 @@
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
-import BlockRoundedIcon from '@mui/icons-material/BlockRounded';
+import ThumbDownOffAltRoundedIcon from '@mui/icons-material/ThumbDownOffAltRounded';
 import BookmarkAddRoundedIcon from '@mui/icons-material/BookmarkAddRounded';
 import NightsStayRoundedIcon from '@mui/icons-material/NightsStayRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
@@ -16,7 +16,7 @@ import { Poster } from '../components/PosterCard';
 import { useToast } from '../components/Toast';
 import { PlayButtons } from '../components/WhereToWatch';
 import { db } from '../db';
-import { markNever, markNotTonight, toggleList, useAllItems } from '../db/items';
+import { markNotTonight, setRating, toggleList, useAllItems } from '../db/items';
 import { saveSettings, useSettings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
 import { formatRuntime } from '../lib/format';
@@ -86,8 +86,8 @@ function PickCard({ pick, myServices, onHide }: { pick: Pick; myServices: string
             <Button size="small" startIcon={<NightsStayRoundedIcon />} color="inherit" onClick={async () => { await markNotTonight(s); trackEvent('feedback', { kind: 'not_tonight' }); onHide(); }}>
               Not tonight
             </Button>
-            <Button size="small" startIcon={<BlockRoundedIcon />} color="inherit" onClick={async () => { await markNever(s); trackEvent('feedback', { kind: 'never' }); toast('Got it, we won’t suggest it again', 'info'); onHide(); }}>
-              Never
+            <Button size="small" startIcon={<ThumbDownOffAltRoundedIcon />} color="inherit" onClick={async () => { await setRating(s, 'dislike'); trackEvent('feedback', { kind: 'dislike' }); toast('Got it, we won’t suggest it again. It’s in Library → Not for me.', 'info'); onHide(); }}>
+              Not for me
             </Button>
           </Box>
         </Box>
@@ -201,12 +201,21 @@ export default function Tonight() {
             <ChipGroup label="I want to" options={WANTS} value={input.want} allowNone onChange={(want) => update({ want })} />
             <Box>
               <Button size="small" color="inherit" startIcon={<TuneRoundedIcon />} onClick={() => setMoreOpen(!moreOpen)}>
-                {moreOpen ? 'Fewer options' : 'More options'} · {DISCOVERY.find((d) => d.key === input.discovery)?.label} · {AUDIENCES.find((a) => a.key === input.audience)?.label}
+                {moreOpen ? 'Fewer options' : 'More options'} · {DISCOVERY.find((d) => d.key === input.discovery)?.label} · {AUDIENCES.find((a) => a.key === input.audience)?.label}{input.anyLanguage ? ' · Any language' : ''}
               </Button>
               <Collapse in={moreOpen}>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                   <ChipGroup label="Discovery" options={DISCOVERY} value={input.discovery} onChange={(discovery) => update({ discovery })} />
                   <ChipGroup label="Watching with" options={AUDIENCES} value={input.audience} onChange={(audience) => update({ audience })} />
+                  <ChipGroup
+                    label="Languages"
+                    options={[
+                      { key: 'mine', label: 'My languages' },
+                      { key: 'any', label: 'Any language (subtitles OK)' },
+                    ]}
+                    value={input.anyLanguage ? 'any' : 'mine'}
+                    onChange={(v) => update({ anyLanguage: v === 'any' })}
+                  />
                   <ChipGroup
                     label="Type"
                     options={[
@@ -265,7 +274,7 @@ export default function Tonight() {
 
       {signal < 3 && !result && (
         <Alert severity="info" sx={{ mt: 2 }}>
-          Tip: <RouterLink to="/search">search</RouterLink> for films you love and tap ♥ Favourite. Picks get better the more MovieMango knows you.
+          Tip: <RouterLink to="/search">search</RouterLink> for films you love and tap ❤️ Loved it. Picks get better the more MovieMango knows you.
         </Alert>
       )}
 

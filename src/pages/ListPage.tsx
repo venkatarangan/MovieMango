@@ -4,7 +4,7 @@ import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextFie
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { EmptyState } from '../components/common';
-import PosterCard, { PosterGrid } from '../components/PosterCard';
+import ListView from '../components/ListView';
 import ShareButton from '../components/ShareButton';
 import { deleteList, renameList, useCustomLists, useListItems } from '../db/items';
 import { listToText, safeFilename } from '../lib/exportText';
@@ -42,14 +42,10 @@ export default function ListPage() {
         {items.length} title{items.length === 1 ? '' : 's'}
       </Typography>
       {items.length ? (
-        <PosterGrid>
-          {items.map((i) => (
-            <PosterCard key={i.key} snap={i} rating={i.rating} />
-          ))}
-        </PosterGrid>
+        <ListView key={list.id} viewKey={list.id} items={items} />
       ) : (
         <EmptyState emoji="📭" title="Empty list">
-          <Typography variant="body2">Add titles from any title page using the “Lists” button.</Typography>
+          <Typography variant="body2">Add titles from any title page with the “Lists” button.</Typography>
         </EmptyState>
       )}
 

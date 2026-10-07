@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './index';
 import { computeNextEpisode, withEpisode, withSeason, withSeenUpTo, type EpisodesSeen, type SeasonInfo } from '../lib/episodes';
-import { itemKey, MAX_CUSTOM_LISTS, type CustomList, type MangoRating, type TitleSnapshot, type UserItem } from '../lib/types';
+import { itemKey, MAX_CUSTOM_LISTS, type CustomList, type MyRating, type TitleSnapshot, type UserItem } from '../lib/types';
 
 const now = () => Date.now();
 
@@ -33,28 +33,38 @@ export async function toggleList(snapshot: TitleSnapshot, list: string, on?: boo
       item.watchedAt = now();
       item.lists = item.lists.filter((l) => l !== 'watchlist');
     }
+    // Saving it for later takes back a 👎.
+    if (list === 'watchlist' && want && item.rating === 'dislike') item.rating = undefined;
   });
 }
 
-export async function setRating(snapshot: TitleSnapshot, rating: MangoRating | undefined) {
+/**
+ * 👍 and ❤️ mark the title watched. 👎 takes it off the watchlist and out of suggestions,
+ * but doesn't claim it was watched (it can mean "not interested").
+ */
+export async function setRating(snapshot: TitleSnapshot, rating: MyRating | undefined) {
   return upsert(snapshot, (item) => {
     item.rating = rating;
-    if (rating && !item.lists.includes('watched')) {
-      item.lists = [...item.lists.filter((l) => l !== 'watchlist'), 'watched'];
+    if (rating) item.lists = item.lists.filter((l) => l !== 'watchlist');
+    if ((rating === 'like' || rating === 'love') && !item.lists.includes('watched')) {
+      item.lists = [...item.lists, 'watched'];
       item.watchedAt = item.watchedAt ?? now();
     }
-  });
-}
-
-export async function markNever(snapshot: TitleSnapshot, never = true) {
-  return upsert(snapshot, (item) => {
-    item.feedback = never ? 'never' : undefined;
   });
 }
 
 export async function markNotTonight(snapshot: TitleSnapshot, days = 7) {
   return upsert(snapshot, (item) => {
     item.notTonightUntil = now() + days * 24 * 3600_000;
+  });
+}
+
+/** Puts lists, rating and watched date back as they were (for Undo). `prev` undefined means "never saved". */
+export async function restoreItem(snapshot: TitleSnapshot, prev: UserItem | undefined) {
+  return upsert(snapshot, (item) => {
+    item.lists = prev?.lists ?? [];
+    item.rating = prev?.rating;
+    item.watchedAt = prev?.watchedAt;
   });
 }
 
@@ -88,15 +98,16 @@ export async function saveCustomTitle(snap: TitleSnapshot, opts: { list?: string
 
 /** "Deletes" a custom title: it leaves every list and loses its rating; the empty record stops sync bringing it back. */
 export async function removeCustomTitle(key: string) {
-  await db.items.update(key, { lists: [], rating: undefined, feedback: undefined, updatedAt: now() });
+  await db.items.update(key, { lists: [], rating: undefined, updatedAt: now() });
 }
 
 /** Adds a title to lists and sets a rating, never taking it out of a list (for imports). */
-export async function importItem(snapshot: TitleSnapshot, lists: string[], rating?: MangoRating) {
+export async function importItem(snapshot: TitleSnapshot, lists: string[], rating?: MyRating) {
   return upsert(snapshot, (item) => {
     for (const l of lists) if (!item.lists.includes(l)) item.lists = [...item.lists, l];
-    if (item.lists.includes('watched')) item.watchedAt ??= now();
     if (rating) item.rating = rating;
+    if ((rating === 'like' || rating === 'love') && !item.lists.includes('watched')) item.lists = [...item.lists, 'watched'];
+    if (item.lists.includes('watched')) item.watchedAt ??= now();
   });
 }
 
@@ -158,9 +169,13 @@ export function useItem(type: string | undefined, id: number | undefined) {
   return useLiveQuery(() => (type && id ? db.items.get(`${type}:${id}`) : undefined), [type, id]);
 }
 
+/** Library views: the built-in lists, plus 'loved' and 'notforme' (by rating), or a custom list id. */
+export const inView = (view: string) => (i: UserItem) =>
+  view === 'loved' ? i.rating === 'love' : view === 'notforme' ? i.rating === 'dislike' : i.lists.includes(view);
+
 export function useListItems(list: string) {
   return useLiveQuery(async () => {
-    const items = await db.items.filter((i) => i.lists.includes(list)).toArray();
+    const items = await db.items.filter(inView(list)).toArray();
     return items.sort((a, b) => b.updatedAt - a.updatedAt);
   }, [list]);
 }
@@ -176,9 +191,9 @@ export function useAllItems() {
 /** TV shows with some episodes seen, not finished or hidden; most recently updated first. */
 export function useShowsInProgress() {
   return useLiveQuery(async () => {
-    const items = await db.items.where('type').equals('tv').filter((i) => !!i.episodesSeen && Object.keys(i.episodesSeen).length > 0 && !i.lists.includes('watched') && i.feedback !== 'never').toArray();
+    const items = await db.items.where('type').equals('tv').filter((i) => !!i.episodesSeen && Object.keys(i.episodesSeen).length > 0 && !i.lists.includes('watched') && i.rating !== 'dislike').toArray();
     return items.sort((a, b) => b.updatedAt - a.updatedAt);
   });
 }
 
-export const listLabel: Record<string, string> = { favourite: 'Favourites', watchlist: 'Watchlist', watched: 'Watched' };
+export const listLabel: Record<string, string> = { watchlist: 'Watchlist', watched: 'Watched', loved: 'Loved', notforme: 'Not for me' };

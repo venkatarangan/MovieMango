@@ -395,3 +395,33 @@ export function findByImdb(imdbId: string) {
 export function getTitleBasics(type: MediaType, id: number) {
   return tmdbGet<TmdbDetails>(`/${type}/${id}`, { language: TMDB_LANGUAGE }, 3 * DAY);
 }
+
+/** TMDB keywords ("heist", "time travel") matching a word, for theme filters on browse pages. */
+export function searchKeywords(query: string) {
+  return tmdbGet<TmdbPage<{ id: number; name: string }>>('/search/keyword', { query, page: 1 }, 7 * DAY, { swrMs: 30 * DAY });
+}
+
+export interface TmdbCredit extends TmdbListItem {
+  media_type: MediaType;
+  character?: string;
+  job?: string;
+  department?: string;
+  episode_count?: number;
+}
+
+export interface TmdbPerson {
+  id: number;
+  name: string;
+  biography?: string;
+  birthday?: string | null;
+  deathday?: string | null;
+  place_of_birth?: string | null;
+  profile_path?: string | null;
+  known_for_department?: string;
+  combined_credits?: { cast: TmdbCredit[]; crew: TmdbCredit[] };
+}
+
+/** A person with every film and show they acted in or worked on. Credits change slowly: 7 days. */
+export function getPerson(id: number) {
+  return tmdbGet<TmdbPerson>(`/person/${id}`, { append_to_response: 'combined_credits', language: TMDB_LANGUAGE }, 7 * DAY, { swrMs: 30 * DAY });
+}

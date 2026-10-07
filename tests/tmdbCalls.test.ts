@@ -53,7 +53,7 @@ function fakeFetch(url: string): Response {
 }
 
 const settings: Settings = { ...DEFAULT_SETTINGS, onboarded: true, tmdbToken: 'x'.repeat(32), services: ['netflix'], languages: ['ta'], useMangoidiots: false };
-const seeds: UserItem[] = [900, 901, 902].map((id, i) => ({ key: `movie:${id}`, tmdbId: id, type: 'movie', title: `Seed ${id}`, genreIds: [53], originalLanguage: 'ta', lists: ['favourite'], rating: 'delicious', addedAt: i, updatedAt: i }));
+const seeds: UserItem[] = [900, 901, 902].map((id, i) => ({ key: `movie:${id}`, tmdbId: id, type: 'movie', title: `Seed ${id}`, genreIds: [53], originalLanguage: 'ta', lists: ['watched'], rating: 'love', addedAt: i, updatedAt: i }));
 const input: TonightInput = { minutes: 120, want: 'thrill', discovery: 'new', audience: 'solo', type: 'movie' };
 
 const realNow = Date.now.bind(Date);

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db } from '../src/db';
-import { createList, deleteList, setRating, toggleList } from '../src/db/items';
+import { createList, deleteList, restoreItem, setRating, toggleList } from '../src/db/items';
 import { mergeRecords } from '../src/lib/backup';
 import { detectLocale } from '../src/lib/languages';
 import { MAX_CUSTOM_LISTS } from '../src/lib/types';
@@ -20,10 +20,28 @@ describe('lists', () => {
     expect(item.watchedAt).toBeTypeOf('number');
   });
 
-  it('rating marks as watched', async () => {
-    const item = await setRating(snap, 'ripe');
-    expect(item.lists).toContain('watched');
-    expect(item.rating).toBe('ripe');
+  it('👍 and ❤️ mark as watched; 👎 only leaves the watchlist', async () => {
+    await toggleList(snap, 'watchlist', true);
+    const liked = await setRating(snap, 'like');
+    expect(liked.lists).toEqual(['watched']);
+    expect(liked.rating).toBe('like');
+    const other = { ...snap, tmdbId: 43 };
+    await toggleList(other, 'watchlist', true);
+    const disliked = await setRating(other, 'dislike');
+    expect(disliked.lists).toEqual([]);
+    // Saving it for later again takes back the 👎.
+    expect((await toggleList(other, 'watchlist', true)).rating).toBeUndefined();
+  });
+
+  it('restores the previous state for Undo', async () => {
+    await toggleList(snap, 'watchlist', true);
+    const prev = await db.items.get('movie:42');
+    await setRating(snap, 'love');
+    const back = await restoreItem(snap, prev);
+    expect(back).toMatchObject({ lists: ['watchlist'], rating: undefined });
+    const fresh = { ...snap, tmdbId: 44 };
+    await setRating(fresh, 'dislike');
+    expect(await restoreItem(fresh, undefined)).toMatchObject({ lists: [], rating: undefined });
   });
 
   it(`caps custom lists at ${MAX_CUSTOM_LISTS}, not counting deleted ones`, async () => {

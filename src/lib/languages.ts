@@ -19,7 +19,27 @@ export const LANGUAGES: { code: string; name: string; native?: string }[] = [
 
 export const DEFAULT_LANGUAGES = ['en', 'ta', 'hi'];
 
-export const languageName = (code?: string) => LANGUAGES.find((l) => l.code === code)?.name ?? code?.toUpperCase() ?? '';
+/** Names for other languages that turn up in world picks (not offered in setup). */
+const MORE_NAMES: Record<string, string> = {
+  it: 'Italian', de: 'German', pt: 'Portuguese', th: 'Thai', tr: 'Turkish', da: 'Danish', sv: 'Swedish', no: 'Norwegian', fa: 'Persian',
+  id: 'Indonesian', pl: 'Polish', cn: 'Cantonese', ar: 'Arabic', he: 'Hebrew', nl: 'Dutch', fi: 'Finnish', ru: 'Russian', ur: 'Urdu', tl: 'Tagalog', or: 'Odia', as: 'Assamese',
+};
+
+export const languageName = (code?: string) => LANGUAGES.find((l) => l.code === code)?.name ?? (code && MORE_NAMES[code]) ?? code?.toUpperCase() ?? '';
+
+/** "Korean", "தமிழ்" or "italian" → its code. */
+export const languageCode = (name: string) => {
+  const n = name.trim().toLowerCase();
+  return LANGUAGES.find((l) => l.name.toLowerCase() === n || l.native === name.trim())?.code ?? Object.entries(MORE_NAMES).find(([, v]) => v.toLowerCase() === n)?.[0];
+};
+
+/**
+ * Languages with strong film and TV traditions that travel well with subtitles, for world picks and
+ * the language of the week (in rotation order). The user's own languages are always left out.
+ */
+export const WORLD_LANGUAGES = ['ko', 'ja', 'es', 'ml', 'fr', 'it', 'te', 'de', 'zh', 'kn', 'pt', 'th', 'bn', 'da', 'tr', 'sv', 'mr', 'fa', 'cn', 'no', 'id', 'pl'];
+
+export const otherLanguages = (mine: string[]) => WORLD_LANGUAGES.filter((l) => !mine.includes(l));
 
 export interface DetectedLocale {
   region: string;

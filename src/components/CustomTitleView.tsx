@@ -4,9 +4,9 @@ import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@mui/material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { Link as RouterLink, useNavigate } from 'react-router';
 import { db } from '../db';
-import { removeCustomTitle, setRating, toSnapshot } from '../db/items';
+import { removeCustomTitle, toSnapshot } from '../db/items';
 import { trackEvent } from '../lib/analytics';
 import { safeFilename, titleToText } from '../lib/exportText';
 import { formatRuntime } from '../lib/format';
@@ -16,7 +16,6 @@ import { itemKey, type MediaType } from '../lib/types';
 import { EmptyState, SectionTitle } from './common';
 import CustomTitleDialog from './CustomTitleDialog';
 import ListActions from './ListActions';
-import { MangoRatingPicker } from './Mango';
 import { Poster } from './PosterCard';
 import ShareButton from './ShareButton';
 
@@ -63,7 +62,7 @@ export default function CustomTitleView({ type, id }: { type: MediaType; id: num
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5, alignItems: 'center' }}>
             <Chip size="small" label="Added by you · not in TMDB" color="secondary" variant="outlined" />
             {item.genreIds.map((g) => (
-              <Chip key={g} size="small" label={genreName(g)} variant="outlined" />
+              <Chip key={g} size="small" label={genreName(g)} variant="outlined" clickable component={RouterLink} to={`/browse/${type}?genre=${g}`} />
             ))}
           </Box>
           {c.director && (
@@ -90,12 +89,6 @@ export default function CustomTitleView({ type, id }: { type: MediaType; id: num
           </Box>
         </Box>
       </Box>
-
-      <SectionTitle>Your rating</SectionTitle>
-      <MangoRatingPicker value={item.rating} onChange={(r) => setRating(snap, r).then(() => trackEvent('rate', { rating: r ?? 'none' }))} />
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-        Rating a title also marks it as watched. Its genres and language help MovieMango learn your taste.
-      </Typography>
 
       <SectionTitle>Story</SectionTitle>
       <Typography sx={{ maxWidth: 760, whiteSpace: 'pre-line' }}>{c.overview || 'No description yet. Tap Edit to add one.'}</Typography>

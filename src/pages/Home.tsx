@@ -17,7 +17,7 @@ import { episodeLabel } from '../lib/episodes';
 import { formatRuntime } from '../lib/format';
 import { languageName } from '../lib/languages';
 import type { MediaType, TitleSnapshot, UserItem } from '../lib/types';
-import { luckyPicks, randomShelf, streamingNow } from '../reco/home';
+import { languageShelf, luckyPicks, randomShelf, streamingNow, worldShelf } from '../reco/home';
 import { partOfDay } from '../reco/moods';
 import type { Pick } from '../reco/tonight';
 
@@ -205,7 +205,7 @@ function FeelingLucky({ settings, items }: { settings: Settings; items: UserItem
   );
 }
 
-function Shelf({ title, to, children, empty }: { title: string; to?: string; children: ReactNode; empty?: boolean }) {
+function Shelf({ title, to, children, empty, note }: { title: string; to?: string; children: ReactNode; empty?: boolean; note?: string }) {
   if (empty) return null;
   return (
     <Box component="section">
@@ -220,6 +220,11 @@ function Shelf({ title, to, children, empty }: { title: string; to?: string; chi
       >
         {title}
       </SectionTitle>
+      {note && (
+        <Typography variant="body2" color="text.secondary" sx={{ mt: -1, mb: 1.5 }}>
+          {note}
+        </Typography>
+      )}
       <PosterRow>{children}</PosterRow>
     </Box>
   );
@@ -263,12 +268,41 @@ function StreamingShelf({ settings, items }: { settings: Settings; items: UserIt
     <Shelf title="From your watchlist, on your services" to="/library?tab=watchlist" empty={!list.length}>
       {list.map(({ item, availability, isNew }) => (
         <Box key={item.key} sx={{ position: 'relative' }}>
-          <PosterCard snap={item} rating={item.rating} subtitle={availability.map((a) => a.service.name).join(' · ')} />
-          <Box sx={{ position: 'absolute', top: 6, right: 6, display: 'flex', gap: 0.5, alignItems: 'center', pointerEvents: 'none' }}>
+          <PosterCard snap={item} subtitle={availability.map((a) => a.service.name).join(' · ')} />
+          <Box sx={{ position: 'absolute', top: 6, left: 6, display: 'flex', gap: 0.5, alignItems: 'center', pointerEvents: 'none' }}>
             {isNew && <Chip size="small" color="secondary" label="New" sx={{ height: 22, fontWeight: 700 }} />}
             {availability[0]?.logoPath && <Box component="img" src={img(availability[0].logoPath, 'w92')} alt="" sx={{ width: 24, height: 24, borderRadius: '6px', boxShadow: 2 }} />}
           </Box>
         </Box>
+      ))}
+    </Shelf>
+  );
+}
+
+function WorldShelf({ settings, items, hidden, seed }: { settings: Settings; items: UserItem[]; hidden: Set<string>; seed: number }) {
+  const tasteKey = items.filter((i) => i.rating || i.lists.includes('watched')).length;
+  const shelf = useQuery({ queryKey: ['world', seed, settings.services, settings.languages, tasteKey > 0], queryFn: () => worldShelf(settings, items, seed), enabled: !!settings.tmdbToken, staleTime: Infinity });
+  const list = (shelf.data ?? []).filter((s) => !hidden.has(`${s.type}:${s.tmdbId}`)).slice(0, SHELF_SIZE);
+  return (
+    <Shelf title="🌏 World picks for you" note="Top-rated in languages you don’t usually watch, on your services. Turn on subtitles and dive in." empty={!list.length}>
+      {list.map((s) => (
+        <PosterCard key={`${s.type}:${s.tmdbId}`} snap={s} subtitle={metaLine(s)} />
+      ))}
+    </Shelf>
+  );
+}
+
+function LanguageOfWeek({ settings, hidden }: { settings: Settings; hidden: Set<string> }) {
+  const week = new Date().toDateString();
+  const shelf = useQuery({ queryKey: ['lang-week', week, settings.services, settings.languages], queryFn: () => languageShelf(settings), enabled: !!settings.tmdbToken, staleTime: Infinity });
+  const data = shelf.data;
+  const list = (data?.titles ?? []).filter((s) => !hidden.has(`${s.type}:${s.tmdbId}`)).slice(0, SHELF_SIZE);
+  if (!data) return null;
+  const name = languageName(data.language);
+  return (
+    <Shelf title={`🗣️ This week: ${name}`} note={`A new language every week. The best-rated ${name} films and shows on your services.`} to={`/browse/movie?lang=${data.language}&sort=top`} empty={!list.length}>
+      {list.map((s) => (
+        <PosterCard key={`${s.type}:${s.tmdbId}`} snap={s} subtitle={[s.year, s.type === 'tv' ? 'Series' : 'Movie'].filter(Boolean).join(' · ')} />
       ))}
     </Shelf>
   );
@@ -297,7 +331,7 @@ export default function Home() {
     return {
       watchlist: all.filter((i) => i.lists.includes('watchlist')).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, SHELF_SIZE),
       watched: all.filter((i) => i.lists.includes('watched')).sort((a, b) => (b.watchedAt ?? b.updatedAt) - (a.watchedAt ?? a.updatedAt)).slice(0, SHELF_SIZE),
-      hidden: new Set(all.filter((i) => i.lists.includes('watched') || i.feedback === 'never').map((i) => i.key)),
+      hidden: new Set(all.filter((i) => i.lists.includes('watched') || i.rating === 'dislike').map((i) => i.key)),
     };
   }, [items]);
 
@@ -316,15 +350,17 @@ export default function Home() {
       <StreamingShelf settings={settings} items={items} />
       <RandomShelf type="movie" settings={settings} hidden={hidden} seed={seed} />
       <RandomShelf type="tv" settings={settings} hidden={hidden} seed={seed + 1} />
+      <WorldShelf settings={settings} items={items} hidden={hidden} seed={seed} />
+      <LanguageOfWeek settings={settings} hidden={hidden} />
 
       <Shelf title="Latest on your watchlist" to="/library?tab=watchlist" empty={!watchlist.length}>
         {watchlist.map((i) => (
-          <PosterCard key={i.key} snap={i} rating={i.rating} />
+          <PosterCard key={i.key} snap={i} />
         ))}
       </Shelf>
       <Shelf title="Recently watched" to="/library?tab=watched" empty={!watched.length}>
         {watched.map((i) => (
-          <PosterCard key={i.key} snap={i} rating={i.rating} />
+          <PosterCard key={i.key} snap={i} />
         ))}
       </Shelf>
 
@@ -333,7 +369,7 @@ export default function Home() {
           <CardContent sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
             <AutoAwesomeRoundedIcon color="primary" />
             <Typography variant="body2">
-              Tap <b>Watchlist</b> or <b>Watched</b> on any title and it shows up here. The more MovieMango knows, the better your picks.
+              Tap <b>＋</b> on any poster to save it, or 👍 ❤️ 👎 on a title page. The more MovieMango knows, the better your picks.
             </Typography>
           </CardContent>
         </Card>

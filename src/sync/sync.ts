@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { db } from '../db';
 import { getSettings, onSettingsSaved, saveSettings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
-import { DriveError, downloadJson, findSyncFile, uploadJson } from './drive';
+import { DriveError, downloadJson, findSyncFile, getFileMeta, uploadJson } from './drive';
 import { driveConfigured, fetchEmail, forgetToken, GoogleAuthError, requestToken, revokeToken, storedToken, type AccessToken } from './google';
 import { mergePayloads, pickSynced, sameContent, type SyncPayload } from './merge';
 
@@ -31,9 +31,22 @@ export function useSyncState(): SyncState {
   );
 }
 
+/**
+ * Changes are batched: the first unsynced change starts this timer, and everything changed before
+ * it fires goes up in one sync (later changes don't push it back). Pending changes are also flushed
+ * when the tab is hidden or closed. This keeps Drive calls far below Google's per-user limits.
+ */
+export const SYNC_BATCH_MS = 2 * 60_000;
+/** Coming back to the tab after this long pulls changes made on other devices. */
+const REFRESH_AFTER_MS = 2 * 60_000;
+
 let token: AccessToken | null = null;
 let fileId: string | undefined;
+/** What the Drive file held after our last sync, so an unchanged file isn't downloaded again. */
+let remoteCopy: { modifiedTime: string; payload: SyncPayload | null } | null = null;
 let applyingRemote = false;
+/** Local changes not yet in Drive. */
+let dirty = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let running: Promise<void> | null = null;
 
@@ -64,24 +77,40 @@ async function applyLocally(merged: SyncPayload) {
   }
 }
 
-/** Pulls the Drive copy, merges both ways, writes locally and uploads if anything changed. */
-async function doSync(t: AccessToken): Promise<{ restoredItems: number; restoredLists: number; hadRemote: boolean }> {
-  const remoteFile = fileId ? { id: fileId } : await findSyncFile(t.token);
-  fileId = remoteFile?.id;
-  const remote = remoteFile ? await downloadJson<SyncPayload>(t.token, remoteFile.id).catch(() => null) : null;
+/**
+ * Pulls the Drive copy, merges both ways, writes locally and uploads if anything changed.
+ * At most three calls: file metadata, a download only if the file changed since our last sync,
+ * and an upload only if the merge changed it.
+ */
+async function doSync(t: AccessToken, opts: { keepalive?: boolean } = {}): Promise<{ restoredItems: number; restoredLists: number; hadRemote: boolean }> {
+  dirty = false;
+  let meta = fileId ? await getFileMeta(t.token, fileId) : null;
+  if (!meta) meta = await findSyncFile(t.token);
+  fileId = meta?.id;
+  const remote = !meta
+    ? null
+    : remoteCopy?.modifiedTime === meta.modifiedTime
+      ? remoteCopy.payload
+      : await downloadJson<SyncPayload>(t.token, meta.id).catch(() => null);
   const { driveSyncKeys } = await getSettings();
   const local = driveSyncKeys ? await localPayload() : withoutKeys(await localPayload());
   const merged = mergePayloads(local, remote?.app === 'MovieMango' ? (driveSyncKeys ? remote : withoutKeys(remote)) : null);
   const newFromRemote = merged.items.length - local.items.length;
   if (!sameContent(local, merged)) await applyLocally(merged);
-  if (!sameContent(remote, merged)) fileId = await uploadJson(t.token, merged, fileId);
+  if (!sameContent(remote, merged)) {
+    const saved = await uploadJson(t.token, merged, fileId, opts);
+    fileId = saved.id;
+    remoteCopy = { modifiedTime: saved.modifiedTime, payload: merged };
+  } else if (meta) remoteCopy = { modifiedTime: meta.modifiedTime, payload: remote };
   const lastSyncAt = Date.now();
   await saveSettings({ lastSyncAt }, { fromSync: true });
-  set({ status: 'idle', lastSyncAt, error: undefined });
+  // Changes made while this sync ran are waiting for the next batch.
+  set({ status: dirty ? 'pending' : 'idle', lastSyncAt, error: undefined });
   return { restoredItems: Math.max(0, newFromRemote), restoredLists: Math.max(0, merged.lists.length - local.lists.length), hadRemote: !!remote };
 }
 
 async function guarded<T>(fn: (t: AccessToken) => Promise<T>): Promise<T | undefined> {
+  const wasDirty = dirty;
   const t = validToken();
   if (!t) {
     set({ status: 'needs-auth' });
@@ -91,33 +120,43 @@ async function guarded<T>(fn: (t: AccessToken) => Promise<T>): Promise<T | undef
   try {
     return await fn(t);
   } catch (e) {
+    // Keep unsynced changes for the next try.
+    dirty ||= wasDirty;
     if (e instanceof DriveError && e.status === 401) {
       token = null;
       forgetToken();
       set({ status: 'needs-auth' });
-    } else set({ status: 'error', error: (e as Error).message });
+    } else {
+      set({ status: 'error', error: (e as Error).message });
+      // Try again in the next batch window.
+      if (dirty) void getSettings().then((s) => s.driveAutoSync && startBatch());
+    }
     return undefined;
   }
 }
 
-/** Sync now if we have a token; otherwise mark that the user needs to reconnect. */
-export function syncNow(): Promise<void> {
+/** Sync now if we have a token; otherwise mark that the user needs to reconnect. One sync at a time. */
+export function syncNow(opts: { keepalive?: boolean } = {}): Promise<void> {
   if (state.status === 'off') return Promise.resolve();
-  running ??= guarded(doSync)
+  clearTimeout(timer);
+  timer = undefined;
+  running ??= guarded((t) => doSync(t, opts))
     .then(() => undefined)
     .finally(() => (running = null));
   return running;
 }
 
-/** Debounced sync after local changes. With auto-sync off, it only marks changes as pending. */
-export function scheduleSync(delayMs = 15_000) {
+/** Starts the batch timer unless one is already waiting. */
+function startBatch() {
+  if (!timer) timer = setTimeout(() => void syncNow(), SYNC_BATCH_MS);
+}
+
+/** Marks a local change. With auto-sync on it joins the current batch; off, it only shows as pending. */
+export function scheduleSync() {
   if (state.status === 'off' || applyingRemote) return;
-  if (state.status !== 'needs-auth') set({ status: 'pending' });
-  clearTimeout(timer);
-  void getSettings().then((s) => {
-    clearTimeout(timer);
-    if (s.driveAutoSync) timer = setTimeout(() => void syncNow(), delayMs);
-  });
+  dirty = true;
+  if (state.status !== 'needs-auth' && state.status !== 'syncing') set({ status: 'pending' });
+  void getSettings().then((s) => s.driveAutoSync && startBatch());
 }
 
 /**
@@ -154,6 +193,10 @@ export async function disconnectDrive() {
   await revokeToken(token?.token ?? storedToken()?.token);
   token = null;
   fileId = undefined;
+  remoteCopy = null;
+  dirty = false;
+  clearTimeout(timer);
+  timer = undefined;
   await saveSettings({ driveConnected: false, driveEmail: '' }, { fromSync: true });
   set({ status: 'off' });
 }
@@ -173,9 +216,15 @@ export async function startSync() {
     table.hook('deleting', onChange);
   }
   onSettingsSaved((changedSynced) => changedSynced && scheduleSync());
+  const whenAuto = (fn: () => void) => void getSettings().then((now) => now.driveAutoSync && now.driveConnected && fn());
+  // Leaving: send what's waiting now rather than at the end of the batch window.
+  const flush = () => dirty && whenAuto(() => void syncNow({ keepalive: true }));
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden' && state.status === 'pending') void getSettings().then((now) => (now.driveAutoSync ? syncNow() : undefined));
+    if (document.visibilityState === 'hidden') flush();
+    // Back after a while: pick up changes made on other devices.
+    else if (Date.now() - state.lastSyncAt > REFRESH_AFTER_MS && validToken()) whenAuto(() => void syncNow());
   });
+  window.addEventListener('pagehide', flush);
   if (s.driveConnected && s.driveAutoSync && validToken()) void syncNow();
 }
 

@@ -1,4 +1,4 @@
-import type { Page, Route } from '@playwright/test';
+import { expect, type Page, type Route } from '@playwright/test';
 
 const COLORS = ['#E57373', '#64B5F6', '#81C784', '#FFB74D', '#BA68C8', '#4DB6AC', '#F06292', '#A1887F', '#90A4AE', '#FFD54F'];
 const LANGS = ['ta', 'hi', 'en'];
@@ -54,10 +54,38 @@ function tmdb(path: string, search: URLSearchParams) {
   if (path.startsWith('/watch/providers/'))
     return { results: [{ provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.jpg' }, { provider_id: 119, provider_name: 'Amazon Prime Video', logo_path: '/prime.jpg' }, { provider_id: 2336, provider_name: 'JioHotstar', logo_path: '/hotstar.jpg' }] };
   const langOffset = { ta: 0, hi: 300, en: 600 }[search.get('with_original_language') ?? ''] ?? 0;
-  if (path.startsWith('/discover/tv')) return page(Array.from({ length: 12 }, (_, i) => 200 + i + langOffset + Number(search.get('page') ?? 1) * 20));
+  // Discover has many pages, like the real thing (browse pages show 100 at a time).
+  const many = (p: ReturnType<typeof page>) => ({ ...p, page: Number(search.get('page') ?? 1), total_pages: 40, total_results: 800 });
+  if (path.startsWith('/discover/tv')) return many(page(Array.from({ length: 12 }, (_, i) => 200 + i + langOffset + Number(search.get('page') ?? 1) * 20)));
   if (path.startsWith('/discover/movie')) {
     const offset = langOffset + (Number(search.get('page') ?? 1) - 1) * 20 + (search.get('sort_by')?.includes('vote_average') ? 40 : 0) + (search.get('primary_release_date.lte') ? 80 : 0);
-    return page(Array.from({ length: 20 }, (_, i) => 100 + i + offset));
+    return many(page(Array.from({ length: 20 }, (_, i) => 100 + i + offset)));
+  }
+  if (path === '/search/keyword') return search.get('query')?.includes('heist') ? { page: 1, total_pages: 1, total_results: 2, results: [{ id: 10051, name: 'heist' }, { id: 9748, name: 'bank heist' }] } : page([]);
+  const pm = path.match(/^\/person\/(\d+)$/);
+  if (pm) {
+    const id = Number(pm[1]);
+    const director = id === 99;
+    const credit = (tid: number, extra: object) => ({ ...title(tid), media_type: 'movie', ...extra });
+    return {
+      id,
+      name: director ? 'Vetrimaaran' : 'Nayanthara',
+      known_for_department: director ? 'Directing' : 'Acting',
+      biography: 'An Indian filmmaker known for gritty, grounded stories. '.repeat(8),
+      birthday: '1975-09-04',
+      place_of_birth: 'Chennai, India',
+      profile_path: null,
+      combined_credits: {
+        cast: director
+          ? []
+          : [
+              ...[101, 102, 103, 104].map((t) => credit(t, { character: `Role ${t}` })),
+              credit(105, { character: 'Herself' }),
+              { ...title(240), title: undefined, name: 'Chat Show', media_type: 'tv', genre_ids: [10767], character: 'Guest', first_air_date: '2024-01-01' },
+            ],
+        crew: director ? [credit(106, { job: 'Director' }), credit(107, { job: 'Director' }), credit(107, { job: 'Writer' })] : [credit(108, { job: 'Director' })],
+      },
+    };
   }
   // Typed searches (imports): every title whose name matches, as three versions (e.g. "Starfall", "Starfall 11", "Starfall 12").
   const typed = path.match(/^\/search\/(movie|tv)$/);
@@ -92,7 +120,7 @@ function tmdb(path: string, search: URLSearchParams) {
       runtime: m[1] === 'movie' ? 95 + (id % 40) : undefined,
       episode_run_time: m[1] === 'tv' ? [42] : undefined,
       tagline: 'Every choice has a sequel.',
-      credits: { cast: Array.from({ length: 8 }, (_, i) => ({ id: i, name: ['Nayanthara', 'Fahadh Faasil', 'Tabu', 'Vijay Sethupathi', 'Sai Pallavi', 'Irrfan Khan', 'Revathi', 'Nawazuddin S.'][i], character: 'Role', profile_path: null })), crew: [{ id: 99, name: 'Vetrimaaran', job: 'Director' }] },
+      credits: { cast: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: ['Nayanthara', 'Fahadh Faasil', 'Tabu', 'Vijay Sethupathi', 'Sai Pallavi', 'Irrfan Khan', 'Revathi', 'Nawazuddin S.'][i], character: 'Role', profile_path: null })), crew: [{ id: 99, name: 'Vetrimaaran', job: 'Director' }] },
       videos: { results: [{ key: 'abc', site: 'YouTube', type: 'Trailer', official: true, name: 'Trailer' }] },
       'watch/providers': { results: { IN: { link: 'https://www.themoviedb.org/movie/1/watch', flatrate: [providers[id % 3]], ads: id % 2 ? [providers[(id + 1) % 3]] : [] } } },
       release_dates: { results: [{ iso_3166_1: 'IN', release_dates: [{ certification: id % 4 ? 'UA' : 'U' }] }] },
@@ -163,19 +191,44 @@ export async function mockGoogle(page: Page, existing: unknown = null) {
       },
     };
   });
-  const drive = { file: existing as unknown, uploads: 0 };
+  // Counts each kind of Drive call, so tests can check batching and skipped downloads.
+  const drive = { file: existing as unknown, modifiedTime: '2026-01-01T00:00:00.000Z', uploads: 0, downloads: 0, metas: 0, lists: 0 };
   await page.route('https://www.googleapis.com/oauth2/v3/userinfo', (route) => route.fulfill({ json: { email: 'tester@example.com' } }));
   await page.route('https://www.googleapis.com/drive/v3/files**', (route) => {
     const url = route.request().url();
-    if (url.includes('alt=media')) return route.fulfill({ json: drive.file });
-    return route.fulfill({ json: { files: drive.file ? [{ id: 'f1', modifiedTime: new Date().toISOString() }] : [] } });
+    if (url.includes('alt=media')) return (drive.downloads++, route.fulfill({ json: drive.file }));
+    if (/\/files\/f1\?/.test(url)) return (drive.metas++, drive.file ? route.fulfill({ json: { id: 'f1', modifiedTime: drive.modifiedTime } }) : route.fulfill({ status: 404, json: { error: { message: 'File not found' } } }));
+    drive.lists++;
+    return route.fulfill({ json: { files: drive.file ? [{ id: 'f1', modifiedTime: drive.modifiedTime }] : [] } });
   });
   await page.route('https://www.googleapis.com/upload/drive/v3/files**', async (route) => {
     const req = route.request();
     const body = req.postData() ?? '';
     drive.uploads++;
     drive.file = req.method() === 'PATCH' ? JSON.parse(body) : JSON.parse(body.split('\r\n\r\n')[2].split('\r\n--')[0]);
-    return route.fulfill({ json: { id: 'f1' } });
+    drive.modifiedTime = new Date(Date.parse(drive.modifiedTime) + 1000).toISOString();
+    return route.fulfill({ json: { id: 'f1', modifiedTime: drive.modifiedTime } });
   });
   return drive;
+}
+
+/** Skips onboarding: writes settings straight into the app's IndexedDB, then reloads. */
+export async function seedOnboarded(page: Page, extra: Record<string, unknown> = {}) {
+  await page.goto('/#/about');
+  await expect(page.getByText(/This product uses the TMDB API/)).toBeVisible();
+  await page.evaluate(
+    (more) =>
+      new Promise<void>((resolve, reject) => {
+        const open = indexedDB.open('moviemango');
+        open.onsuccess = () => {
+          const tx = open.result.transaction('kv', 'readwrite');
+          tx.objectStore('kv').put({ key: 'settings', value: { onboarded: true, tmdbToken: 'eyJ' + 'a'.repeat(80), aiEngine: 'basic', ...more } });
+          tx.oncomplete = () => (open.result.close(), resolve());
+          tx.onerror = () => reject(tx.error);
+        };
+        open.onerror = () => reject(open.error);
+      }),
+    extra,
+  );
+  await page.reload();
 }

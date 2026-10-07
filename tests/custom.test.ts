@@ -53,15 +53,15 @@ describe('custom titles in the database', () => {
 
   it('creates, edits (keeping lists and rating), changes type and deletes', async () => {
     const snap = customSnapshot({ type: 'movie', title: 'Home Video', year: 1998 });
-    const created = await saveCustomTitle(snap, { list: 'favourite' });
-    expect(created.lists).toEqual(['favourite']);
+    const created = await saveCustomTitle(snap, { list: 'l_fav' });
+    expect(created.lists).toEqual(['l_fav']);
     await toggleList(snap, 'watched', true);
     const edited = await saveCustomTitle({ ...snap, title: 'Home Video (VHS)', year: undefined });
-    expect(edited).toMatchObject({ title: 'Home Video (VHS)', lists: ['favourite', 'watched'] });
+    expect(edited).toMatchObject({ title: 'Home Video (VHS)', lists: ['l_fav', 'watched'] });
     expect(edited.year).toBeUndefined();
     const moved = await saveCustomTitle({ ...snap, type: 'tv' }, { previousKey: created.key });
     expect(moved.key).toBe(`tv:${snap.tmdbId}`);
-    expect(moved.lists).toEqual(['favourite', 'watched']);
+    expect(moved.lists).toEqual(['l_fav', 'watched']);
     expect((await db.items.get(created.key))!.lists).toEqual([]);
     await removeCustomTitle(moved.key);
     const gone = (await db.items.get(moved.key))!;
@@ -72,9 +72,9 @@ describe('custom titles in the database', () => {
   it('import adds lists and ratings but never removes', async () => {
     const snap = { tmdbId: 7, type: 'movie' as const, title: 'Vikram', genreIds: [28] };
     await toggleList(snap, 'watchlist', true);
-    const item = await importItem(snap, ['watched', 'l_x'], 'ripe');
+    const item = await importItem(snap, ['watched', 'l_x'], 'like');
     expect(item.lists).toEqual(['watchlist', 'watched', 'l_x']);
-    expect(item.rating).toBe('ripe');
+    expect(item.rating).toBe('like');
     expect(item.watchedAt).toBeTypeOf('number');
   });
 });
@@ -147,7 +147,7 @@ describe('import', () => {
 - Kaithi (2019) · movie
 - Unknown thing
 ## 🌧️ Rainy day
-- Kaithi (2019) · movie · rating: ripe
+- Kaithi (2019) · movie · rating: like
 - Our Wedding (2018) · custom · url: https://example.com/w`).rows;
     const kaithi = { item: { id: 1, title: 'Kaithi', release_date: '2019-10-25', genre_ids: [28] }, type: 'movie' as const };
     const s = await applyImport([
@@ -160,8 +160,9 @@ describe('import', () => {
     const list = (await db.lists.toArray())[0];
     expect(list).toMatchObject({ name: 'Rainy day', emoji: '🌧️' });
     const k = (await db.items.get('movie:1'))!;
-    expect(k.lists).toEqual(['watchlist', list.id]);
-    expect(k.rating).toBe('ripe');
+    // 👍 also means watched.
+    expect(k.lists).toEqual(['watchlist', list.id, 'watched']);
+    expect(k.rating).toBe('like');
     const custom = (await db.items.toArray()).find(isCustom)!;
     expect(custom).toMatchObject({ title: 'Our Wedding', year: 2018, lists: [list.id], custom: { url: 'https://example.com/w' } });
     // Importing the same custom title again updates it instead of adding a copy.

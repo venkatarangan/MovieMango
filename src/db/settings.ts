@@ -23,7 +23,7 @@ export interface Settings {
   /** Google Drive sync: set once the user signs in. */
   driveConnected: boolean;
   driveEmail: string;
-  /** Sync about 15 s after each change and on start; when off, only "Sync now" syncs. Per device. */
+  /** Sync changes in 2-minute batches, when leaving the app and on start; when off, only "Sync now" syncs. Per device. */
   driveAutoSync: boolean;
   /** Keep the TMDB and Gemini keys in the Drive file so other devices pick them up. Per device. */
   driveSyncKeys: boolean;

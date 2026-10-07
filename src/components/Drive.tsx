@@ -66,9 +66,11 @@ export function SyncIndicator() {
       ? `Sync problem: ${sync.error}. Tap to retry.`
       : manualPending
         ? 'Changes not synced yet. Tap to sync with Google Drive.'
-        : busy
-          ? 'Syncing with Google Drive…'
-          : `Synced with Google Drive ${ago(sync.lastSyncAt)}`;
+        : sync.status === 'pending'
+          ? 'Changes will be saved to Google Drive within 2 minutes. Tap to sync now.'
+          : busy
+            ? 'Syncing with Google Drive…'
+            : `Synced with Google Drive ${ago(sync.lastSyncAt)}`;
   return (
     <Tooltip title={title}>
       <IconButton size="small" onClick={() => void syncNow()} aria-label={title} color={sync.status === 'error' ? 'error' : 'inherit'}>
@@ -96,7 +98,7 @@ function SyncOptions() {
         label="Sync automatically"
       />
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 6, mt: -0.5, mb: 1 }}>
-        On: changes are saved to Drive a few seconds after you make them. Off: only when you tap Sync now (the cloud icon turns orange when there’s something to sync).
+        On: changes are gathered and saved to Drive within 2 minutes, and right away when you leave the app. Off: only when you tap Sync now (the cloud icon turns orange when there’s something to sync).
       </Typography>
       <FormControlLabel
         control={<Switch checked={settings.driveSyncKeys} onChange={(e) => saveSettings({ driveSyncKeys: e.target.checked }).then(() => syncNow())} />}
