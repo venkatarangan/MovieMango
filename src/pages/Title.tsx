@@ -235,7 +235,7 @@ function TmdbTitle() {
               </Box>
             </CardContent>
           </Card>
-          <ReviewReader review={review.data} open={readerOpen} onClose={() => setReaderOpen(false)} />
+          <ReviewReader review={review.data} open={readerOpen} onClose={() => setReaderOpen(false)} watchlist={false} />
         </>
       )}
 

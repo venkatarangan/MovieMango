@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import DOMPurify from 'dompurify';
 import { getReview, type ReviewSummary } from '../api/mangoidiots';
 import { MangoBadge } from './Mango';
+import { ReviewCover, ReviewWatchlistButton } from './ReviewCover';
 
 function cleanHtml(html: string) {
   const clean = DOMPurify.sanitize(html, { USE_PROFILES: { html: true }, FORBID_TAGS: ['style', 'form', 'input', 'script'], FORBID_ATTR: ['style', 'onerror', 'onclick'] });
@@ -12,7 +13,8 @@ function cleanHtml(html: string) {
   return clean.replace(/<a /g, '<a target="_blank" rel="noopener noreferrer" ').replace(/<img /g, '<img loading="lazy" ');
 }
 
-export default function ReviewReader({ review, open, onClose }: { review: ReviewSummary; open: boolean; onClose: () => void }) {
+/** `watchlist` adds an "Add to watchlist" button; leave it off where the page already has one (title pages). */
+export default function ReviewReader({ review, open, onClose, watchlist = true }: { review: ReviewSummary; open: boolean; onClose: () => void; watchlist?: boolean }) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const q = useQuery({ queryKey: ['review', review.id], queryFn: () => getReview(review.id), enabled: open });
@@ -38,6 +40,7 @@ export default function ReviewReader({ review, open, onClose }: { review: Review
         </IconButton>
       </DialogTitle>
       <DialogContent dividers>
+        {review.poster && <ReviewCover src={review.poster} sx={{ borderRadius: '12px', mb: 2 }} />}
         {q.isLoading && (
           <Box sx={{ display: 'grid', placeItems: 'center', py: 6 }}>
             <CircularProgress />
@@ -49,9 +52,12 @@ export default function ReviewReader({ review, open, onClose }: { review: Review
           <Typography variant="caption" color="text.secondary">
             © Mangoidiots (mangoidiots.com). Shown with permission.
           </Typography>
-          <Button href={review.link} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewRoundedIcon />} variant="outlined" color="inherit" size="small">
-            Open on Mangoidiots
-          </Button>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            {watchlist && <ReviewWatchlistButton postTitle={review.title} />}
+            <Button href={review.link} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewRoundedIcon />} variant="outlined" color="inherit" size="small">
+              Open on Mangoidiots
+            </Button>
+          </Box>
         </Box>
       </DialogContent>
     </Dialog>

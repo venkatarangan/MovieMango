@@ -89,6 +89,21 @@ test('quick ＋ and 👎 on posters, genre and person pages, list tools', async 
   await page.getByRole('button', { name: `Undo not for me: ${hidden}` }).click();
   await expect(page.getByText(/Nothing in Not for me yet/)).toBeVisible();
 
+  // Reviews: whole covers, and "Add to watchlist" finds the reviewed film (or lets you pick).
+  await page.goto('/#/reviews');
+  await page.getByRole('button', { name: 'Add “Madras Nights” to watchlist' }).click();
+  await expect(page.getByText('Added “Madras Nights” to your watchlist')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'On your watchlist · Open' })).toHaveAttribute('href', '#/title/movie/103');
+  const cover = page.locator('img[src*="i0.wp.com"]:not([aria-hidden])').first();
+  expect(await cover.evaluate((img: HTMLImageElement) => getComputedStyle(img).objectFit)).toBe('contain');
+  await page.screenshot({ path: shot('44-reviews', p), fullPage: true });
+  await page.getByText('Tea Estate (2019), pure comfort').click();
+  await expect(page.getByRole('dialog').locator('img[src*="i0.wp.com"]').first()).toBeVisible();
+  await page.screenshot({ path: shot('45-review-reader', p) });
+  await page.getByRole('dialog').getByRole('button', { name: 'Add “Tea Estate” to watchlist' }).click();
+  // No sure match among the results: Search opens so you can pick the right one.
+  await expect(page).toHaveURL(/#\/search\?q=Tea%20Estate/);
+
   // Tonight can look beyond your languages.
   await page.goto('/#/tonight');
   await page.getByRole('button', { name: /More options/ }).click();

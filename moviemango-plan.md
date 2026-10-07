@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -982,3 +982,15 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 > right in the welcomescreen, pre setup, version and smaller footer has to be visible.
 
 - Welcome (all steps, all screen sizes) ends with the small footer (pillars, About · Privacy · Mangoidiots · version), shared as `SmallFooter` in `Layout.tsx`. The Welcome hero also lists the fourth pillar, 🧠 Local AI.
+
+---
+
+## 27. Eighteenth-round prompt (verbatim) and response
+
+> 1) Add temp folder to gitignore and also to backup.bat
+> 2) See the two screenshots in temp folder. #1 shows the https://watch.mangoidiots.com/#/reviews listing page, you will see the blog cover image cropped, they are in 1550 pixels wide, so try to create a square frame and in that show the blog cover image in the centre to avoid it or any other better fix. 2) in the #2 image you will see the full blog review, the blog cover image is missing, show it on top for adding a character. 3) when they see a review, at the bottom you have "Find movie" instead say "Add to watchlist movie"
+
+- `temp/` is git-ignored and skipped by `backup.bat`.
+- Covers: a square frame would leave big empty bands around a 1550×600 image, so `ReviewCover` uses a 1550:600 frame (whole image, no crop); other shapes are centred over a blurred copy of themselves. Used on review cards and at the top of the full review.
+- "Find …" became "Add “Title” to watchlist" (cards and the bottom of the full review; hidden on title pages, which have their own button). It matches the headline's title and year on TMDB (`src/lib/reviewMatch.ts`), adds with Undo, then shows "On your watchlist · Open"; with no sure match it opens Search to pick.
+- Checked: typecheck, build, 107 unit tests, 16 Playwright tests (reviews checks added), screenshots.
