@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -893,3 +893,20 @@ Answers to Claude's questions (options chosen): Drive "configurable" = sync sett
 - **Docs:** README features, `docs/architecture.md` (code map, routes, Home, search links, sync options, caching, custom titles, Markdown, episodes), `docs/testing-locally.md` (search links locally), `CLAUDE.md` (built items, backlog status, gotchas: tests on `/mnt/c`, negative ids, shared cached objects).
 - **Checked:** typecheck, production build, 96 unit tests and 12 Playwright tests (phone and desktop), screenshots reviewed.
 
+
+---
+
+## 23. Fourteenth-round prompts (verbatim) and response
+
+> supporting google drive by users in this app, will it incur any cost to me if the user base increases?
+
+> give me the actual steps in console.cloud.google.com on how to do these, their ui is too complex for me to follow.
+
+> add VITE_GOOGLE_CLIENT_ID=… to .env.local. I have also published the app
+
+> yes update claude.md. do a new build to reflect it and push.
+
+- **Cost:** none. The Drive API is free, data sits in each user's own `appDataFolder`, calls go browser → Google. `drive.appdata` is non-sensitive, so no paid security assessment. Scale limits are quotas (errors, not bills) and the unverified-app screen until brand verification.
+- **Setup done by the owner:** Drive API enabled; Google Auth Platform (External, published); scopes `drive.appdata`, `openid`, `userinfo.email`; Web client with origins `https://watch.mangoidiots.com`, `http://localhost:5173`, `http://localhost:4173`. Client ID in the Actions variable `GOOGLE_CLIENT_ID` and `.env.local`.
+- **Next:** Branding (homepage, `privacy.html`, `mangoidiots.com` domain) and Verification Center, to remove the unverified-app screen.
+- Pushed to redeploy so the live build includes the client ID.
