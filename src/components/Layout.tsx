@@ -20,8 +20,8 @@ const NAV = [
 
 const CHANGELOG_URL = `${SOURCE_URL}/blob/main/CHANGELOG.md`;
 
-/** Phones: the bottom tab bar replaces the page footer, so this short one ends each page's content instead. */
-function PhoneFooter() {
+/** A short footer: on phones it ends each page's content (the tab bar replaces the page footer); also on Welcome. */
+export function SmallFooter() {
   return (
     <Box component="footer" sx={{ mt: 5, pt: 2, borderTop: 1, borderColor: 'divider', textAlign: 'center' }}>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
@@ -84,7 +84,7 @@ export default function Layout() {
 
       <Container component="main" maxWidth="lg" sx={{ flex: 1, py: { xs: 2, md: 4 }, px: { xs: 2, sm: 3 }, pb: { xs: 12, md: 4 } }}>
         <Outlet />
-        {!desktop && <PhoneFooter />}
+        {!desktop && <SmallFooter />}
       </Container>
 
       {desktop && (
