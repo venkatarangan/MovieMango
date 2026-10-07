@@ -108,8 +108,8 @@ const roundButton = {
   '&:hover': { bgcolor: 'rgba(15,18,24,.85)' },
 };
 
-/** ＋ (watchlist, watched, liked, loved) and 👎 over a poster's top-right corner. */
-export function QuickActions({ snap }: { snap: TitleSnapshot }) {
+/** ＋ (watchlist, watched, liked, loved) and 👎 over a poster's top-right corner, or `inline` in a row of other controls. */
+export function QuickActions({ snap, inline }: { snap: TitleSnapshot; inline?: boolean }) {
   const item = useSavedItem(snap);
   const { rate, toggle } = useTitleActions(snap);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -122,7 +122,7 @@ export function QuickActions({ snap }: { snap: TitleSnapshot }) {
   };
 
   return (
-    <Box sx={{ position: 'absolute', top: 6, right: 6, display: 'flex', gap: 0.5, zIndex: 2 }}>
+    <Box sx={inline ? { display: 'flex', gap: 0.5 } : { position: 'absolute', top: 6, right: 6, display: 'flex', gap: 0.5, zIndex: 2 }}>
       <Tooltip describeChild title={item?.lists.length || item?.rating === 'like' || item?.rating === 'love' ? 'Saved: change' : 'Add to Watchlist or Watched'}>
         <IconButton
           size="small"

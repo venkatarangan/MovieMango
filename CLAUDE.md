@@ -6,6 +6,7 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 - `npm run dev` (port 5173) · `npm test` (Vitest) · `npm run e2e` (Playwright, all APIs mocked) · `npm run typecheck` · `npm run build`
 - Run `npm test` and `npm run e2e` before committing UI or logic changes, and look at the screenshots in `test-results/screens/`.
 - A push to `main` deploys (GitHub Actions → Pages) in about a minute. Hosting, DNS and fixes: `docs/operations.md`.
+- **Every push to `main` bumps the version** (each push is a release). Patch for fixes, copy and small tweaks; minor for new features or data-model changes. `npm version patch|minor --no-git-tag-version` updates `package.json` and the lockfile; add a dated `CHANGELOG.md` entry in the same commit. The app reads the version from `package.json` at build time (`vite.config.ts` → `src/lib/appInfo.ts`); the deploy also stamps the commit id (`VITE_BUILD_SHA`), shown in Settings and the footer tooltip.
 
 ## Where things are
 - Code map and key decisions: `docs/architecture.md`. Local testing: `docs/testing-locally.md`.

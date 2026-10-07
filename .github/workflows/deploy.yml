@@ -30,6 +30,8 @@ jobs:
           # Set these under Settings → Secrets and variables → Actions → Variables. All are public values.
           VITE_GA_ID: ${{ vars.GA_ID }}
           VITE_GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          # Shown next to the version (Settings, footer tooltip) so every deploy can be told apart.
+          VITE_BUILD_SHA: ${{ github.sha }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

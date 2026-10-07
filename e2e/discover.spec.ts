@@ -20,9 +20,26 @@ test('quick ＋ and 👎 on posters, genre and person pages, list tools', async 
 
   const add = movies.getByRole('button', { name: /^Add .* to a list$/ }).first();
   const saved = (await add.getAttribute('aria-label'))!.replace(/^Add (.*) to a list$/, '$1');
+  const rowSize = await movies.getByRole('button', { name: /^Add .* to a list$/ }).count();
   await add.click();
   await page.getByRole('menuitem', { name: /^Watchlist/ }).click();
   await expect(page.getByText('Added to Watchlist')).toBeVisible();
+  // A saved suggestion leaves the row and the next one takes its slot (first stays first).
+  await expect(movies.getByText(saved, { exact: true })).toHaveCount(0);
+  await expect(movies.getByRole('button', { name: /^Add .* to a list$/ })).toHaveCount(rowSize);
+  const newFirst = (await movies.getByRole('button', { name: /^Add .* to a list$/ }).first().getAttribute('aria-label'))!;
+  expect(newFirst).not.toBe(`Add ${saved} to a list`);
+
+  // Feeling lucky works the same way, with its own small ＋ and 👎.
+  const lucky = page.locator('.MuiCard-root', { has: page.getByRole('heading', { name: /Feeling lucky/ }) });
+  const luckyAdd = lucky.getByRole('button', { name: /^Add .* to a list$/ }).first();
+  await expect(luckyAdd).toBeVisible({ timeout: 30_000 });
+  const luckyCount = await lucky.getByRole('button', { name: /^Add .* to a list$/ }).count();
+  const luckyTitle = (await luckyAdd.getAttribute('aria-label'))!.replace(/^Add (.*) to a list$/, '$1');
+  await luckyAdd.click();
+  await page.getByRole('menuitem', { name: /^Watched/ }).click();
+  await expect(lucky.getByText(luckyTitle, { exact: true })).toHaveCount(0);
+  await expect(lucky.getByRole('button', { name: /^Add .* to a list$/ })).toHaveCount(luckyCount);
 
   const notForMe = movies.getByRole('button', { name: /^Not for me: / });
   const undone = (await notForMe.nth(1).getAttribute('aria-label'))!.replace('Not for me: ', '');

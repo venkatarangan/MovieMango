@@ -6,7 +6,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { AppBar, BottomNavigation, BottomNavigationAction, Box, Button, Container, Link, Paper, Toolbar, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router';
-import { APP_VERSION, SOURCE_URL } from '../lib/appInfo';
+import { APP_VERSION, BUILD_ID, SOURCE_URL } from '../lib/appInfo';
 import { SyncIndicator } from './Drive';
 import { Wordmark } from './Logo';
 
@@ -30,7 +30,7 @@ export function SmallFooter() {
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
         <Link component={RouterLink} to="/about" color="inherit">About</Link> · <Link component={RouterLink} to="/privacy" color="inherit">Privacy</Link> ·{' '}
         <Link href="https://mangoidiots.com" target="_blank" rel="noopener noreferrer" color="inherit">Mangoidiots</Link> ·{' '}
-        <Link href={CHANGELOG_URL} target="_blank" rel="noopener noreferrer" color="inherit" title="What’s new">v{APP_VERSION}</Link>
+        <Link href={CHANGELOG_URL} target="_blank" rel="noopener noreferrer" color="inherit" title={`What’s new · build ${BUILD_ID}`}>v{APP_VERSION}</Link>
       </Typography>
     </Box>
   );
@@ -93,7 +93,7 @@ export default function Layout() {
             <Typography variant="body2" color="text.secondary">
               🔒 Private · 💸 Free · 🔓 Open · 🧠 Local AI by default — <Link component={RouterLink} to="/about" color="inherit">About</Link> ·{' '}
               <Link component={RouterLink} to="/privacy" color="inherit">Privacy</Link> ·{' '}
-              <Link href={CHANGELOG_URL} target="_blank" rel="noopener noreferrer" color="inherit" title="What’s new">
+              <Link href={CHANGELOG_URL} target="_blank" rel="noopener noreferrer" color="inherit" title={`What’s new · build ${BUILD_ID}`}>
                 v{APP_VERSION}
               </Link>
             </Typography>
