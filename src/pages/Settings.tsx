@@ -16,7 +16,7 @@ import { useToast } from '../components/Toast';
 import { db } from '../db';
 import { saveSettings, useSettings } from '../db/settings';
 import { analyticsConfigured } from '../lib/analytics';
-import { APP_VERSION, SOURCE_URL } from '../lib/appInfo';
+import { APP_VERSION, BUILD_ID, SOURCE_URL } from '../lib/appInfo';
 import { createBackup, restoreBackup } from '../lib/backup';
 import { LANGUAGES } from '../lib/languages';
 import { SERVICES } from '../lib/providers';
@@ -182,7 +182,7 @@ export default function SettingsPage() {
       </Stack>
 
       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 3 }}>
-        MovieMango v{APP_VERSION} ·{' '}
+        MovieMango v{APP_VERSION} (build {BUILD_ID}) ·{' '}
         <Link href={`${SOURCE_URL}/blob/main/CHANGELOG.md`} target="_blank" rel="noopener noreferrer" color="inherit">
           What’s new
         </Link>

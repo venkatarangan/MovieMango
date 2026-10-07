@@ -4,11 +4,12 @@ import CasinoRoundedIcon from '@mui/icons-material/CasinoRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import { Autocomplete, Box, Button, Card, CardContent, Chip, CircularProgress, InputAdornment, Skeleton, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router';
 import { img, mediaTypeOf, searchMulti, snapshotFromList, type TmdbListItem } from '../api/tmdb';
 import { ErrorNote, SectionTitle } from '../components/common';
 import PosterCard, { Poster, PosterRow } from '../components/PosterCard';
+import { QuickActions } from '../components/TitleActions';
 import { PlayButtons } from '../components/WhereToWatch';
 import { useAllItems, useShowsInProgress } from '../db/items';
 import { useSettings, type Settings } from '../db/settings';
@@ -16,6 +17,7 @@ import { trackEvent } from '../lib/analytics';
 import { episodeLabel } from '../lib/episodes';
 import { formatRuntime } from '../lib/format';
 import { languageName } from '../lib/languages';
+import { fillSlots } from '../lib/slots';
 import type { MediaType, TitleSnapshot, UserItem } from '../lib/types';
 import { languageShelf, luckyPicks, randomShelf, streamingNow, worldShelf } from '../reco/home';
 import { partOfDay } from '../reco/moods';
@@ -34,6 +36,24 @@ const forNow = () => {
 };
 
 const metaLine = (s: TitleSnapshot) => [s.year, s.type === 'tv' ? 'Series' : 'Movie', languageName(s.originalLanguage)].filter(Boolean).join(' · ');
+
+const keyOf = (s: TitleSnapshot) => `${s.type}:${s.tmdbId}`;
+
+/**
+ * The first `size` candidates that aren't hidden. When a shown title becomes hidden (saved,
+ * watched, 👎), the next candidate takes its slot and the others stay put; Undo brings it back.
+ * A new list starts over.
+ */
+function useSlots<T>(list: T[], key: (t: T) => string, hidden: Set<string>, size: number): T[] {
+  const keys = list.map(key);
+  const state = useRef({ id: '', slots: [] as string[][] });
+  const id = keys.join('|');
+  if (state.current.id !== id) state.current = { id, slots: [] };
+  const { slots, shown } = fillSlots(state.current.slots, keys, hidden, size);
+  state.current.slots = slots;
+  const byKey = new Map(list.map((t, i) => [keys[i], t]));
+  return shown.map((k) => byKey.get(k)!);
+}
 
 function useDebounced<T>(value: T, ms: number) {
   const [v, setV] = useState(value);
@@ -134,8 +154,9 @@ function LuckyPick({ pick, services }: { pick: Pick; services: string[] }) {
         <Typography variant="body2" sx={{ fontStyle: 'italic', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
           {pick.why}
         </Typography>
-        <Box sx={{ mt: 0.5 }}>
+        <Box sx={{ mt: 0.5, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
           <PlayButtons availability={pick.availability.slice(0, 1)} title={s.title} myServices={services} compact />
+          <QuickActions snap={s} inline />
         </Box>
       </Box>
     </Box>
@@ -150,7 +171,12 @@ function FeelingLucky({ settings, items }: { settings: Settings; items: UserItem
   // Kept for the whole session: coming back to Home shouldn't recompute (or re-call TMDB).
   const lucky = useQuery({ queryKey: ['lucky', day, partOfDay(), round], queryFn: () => luckyPicks(settings, items, round), staleTime: Infinity, gcTime: Infinity, enabled: !!settings.tmdbToken });
   const picks = lucky.data?.picks ?? [];
-  const shown = picks.length > 3 ? picks.slice((turn % 2) * 3, (turn % 2) * 3 + 3) : picks;
+  // Odd turns show the second three first. A pick you save, watch or 👎 makes way for the next one;
+  // picks that were already on your watchlist (a nudge) stay until you act on them.
+  const ordered = picks.length > 3 && turn % 2 ? [...picks.slice(3), ...picks.slice(0, 3)] : picks;
+  const onWatchlist = useMemo(() => new Set(items.filter((i) => i.lists.includes('watchlist')).map((i) => i.key)), [lucky.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hidden = new Set(items.filter((i) => i.lists.includes('watched') || i.rating === 'dislike' || (i.lists.includes('watchlist') && !onWatchlist.has(i.key))).map((i) => i.key));
+  const shown = useSlots(ordered, (p) => keyOf(p.snap), hidden, 3);
 
   return (
     <Card variant="outlined" sx={{ borderRadius: '20px', mt: 2.5, borderColor: 'primary.main', borderWidth: 2 }}>
@@ -242,7 +268,7 @@ function ShelfSkeleton() {
 
 function RandomShelf({ type, settings, hidden, seed }: { type: MediaType; settings: Settings; hidden: Set<string>; seed: number }) {
   const shelf = useQuery({ queryKey: ['shelf', type, seed, settings.services, settings.languages], queryFn: () => randomShelf(type, settings, seed), enabled: !!settings.tmdbToken });
-  const list = (shelf.data ?? []).filter((s) => !hidden.has(`${s.type}:${s.tmdbId}`)).slice(0, SHELF_SIZE);
+  const list = useSlots(shelf.data ?? [], keyOf, hidden, SHELF_SIZE);
   const title = type === 'movie' ? 'Movies for you' : 'Shows for you';
   if (shelf.isLoading)
     return (
@@ -282,7 +308,7 @@ function StreamingShelf({ settings, items }: { settings: Settings; items: UserIt
 function WorldShelf({ settings, items, hidden, seed }: { settings: Settings; items: UserItem[]; hidden: Set<string>; seed: number }) {
   const tasteKey = items.filter((i) => i.rating || i.lists.includes('watched')).length;
   const shelf = useQuery({ queryKey: ['world', seed, settings.services, settings.languages, tasteKey > 0], queryFn: () => worldShelf(settings, items, seed), enabled: !!settings.tmdbToken, staleTime: Infinity });
-  const list = (shelf.data ?? []).filter((s) => !hidden.has(`${s.type}:${s.tmdbId}`)).slice(0, SHELF_SIZE);
+  const list = useSlots(shelf.data ?? [], keyOf, hidden, SHELF_SIZE);
   return (
     <Shelf title="🌏 World picks for you" note="Top-rated in languages you don’t usually watch, on your services. Turn on subtitles and dive in." empty={!list.length}>
       {list.map((s) => (
@@ -296,7 +322,7 @@ function LanguageOfWeek({ settings, hidden }: { settings: Settings; hidden: Set<
   const week = new Date().toDateString();
   const shelf = useQuery({ queryKey: ['lang-week', week, settings.services, settings.languages], queryFn: () => languageShelf(settings), enabled: !!settings.tmdbToken, staleTime: Infinity });
   const data = shelf.data;
-  const list = (data?.titles ?? []).filter((s) => !hidden.has(`${s.type}:${s.tmdbId}`)).slice(0, SHELF_SIZE);
+  const list = useSlots(data?.titles ?? [], keyOf, hidden, SHELF_SIZE);
   if (!data) return null;
   const name = languageName(data.language);
   return (
@@ -331,7 +357,8 @@ export default function Home() {
     return {
       watchlist: all.filter((i) => i.lists.includes('watchlist')).sort((a, b) => b.updatedAt - a.updatedAt).slice(0, SHELF_SIZE),
       watched: all.filter((i) => i.lists.includes('watched')).sort((a, b) => (b.watchedAt ?? b.updatedAt) - (a.watchedAt ?? a.updatedAt)).slice(0, SHELF_SIZE),
-      hidden: new Set(all.filter((i) => i.lists.includes('watched') || i.rating === 'dislike').map((i) => i.key)),
+      // Suggestion rows skip what you've already saved, watched or 👎'd; saving one swaps in the next.
+      hidden: new Set(all.filter((i) => i.lists.includes('watched') || i.lists.includes('watchlist') || i.rating === 'dislike').map((i) => i.key)),
     };
   }, [items]);
 

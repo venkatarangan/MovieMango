@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.1 (2026-10-07)
+
+- The version is in every footer (linked to this changelog), in Settings, and on the Welcome screens. Phones get a short footer at the end of each page.
+- Welcome lists a fourth promise: 🧠 Local AI, which runs on your device by default.
+- Home: save, watch or 👎 a suggestion (Movies/Shows for you, World picks, this week's language, Feeling lucky) and the next one takes its place; Undo puts it back. Feeling lucky picks have ＋ and 👎 too, and the rows no longer suggest titles already on your watchlist.
+- Reviews: covers show whole, without cropping; the full review opens with its cover; "Add to watchlist" finds the reviewed film and saves it, or opens Search to pick when unsure.
+
 ## 0.3.0 (2026-10-07)
 
 - Ratings: 👎 Not for me · 👍 Liked it · ❤️ Loved it, right under Watchlist and Watched on every title. 👍 and ❤️ mark it watched; 👎 keeps it out of your picks.
@@ -9,8 +16,7 @@
 - Cast and director pages: tap a name to see everything they acted in or directed.
 - Discovery beyond your languages: a 🌏 World picks row and a weekly language row on Home, and "Any language (subtitles OK)" in Tonight.
 - Lighter Drive sync: changes made within 2 minutes go up together, and it also syncs when you open, leave or come back to the app. Retries politely when Google is busy.
-- Arrows on Home rows for mouse users; the footer links Mangoidiots, says "Local AI by default" and shows the version (linked to this changelog). Phones get a short footer at the end of each page, and Settings shows the version too.
-- Reviews: covers show whole, without cropping; the full review opens with its cover; "Add to watchlist" finds the reviewed film and saves it, or opens Search to pick when unsure.
+- Arrows on Home rows for mouse users; the footer links Mangoidiots and says "Local AI by default".
 
 ## 0.2.0 (2026-10-03)
 

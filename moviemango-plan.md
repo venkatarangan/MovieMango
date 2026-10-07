@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -994,3 +994,18 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 - Covers: a square frame would leave big empty bands around a 1550×600 image, so `ReviewCover` uses a 1550:600 frame (whole image, no crop); other shapes are centred over a blurred copy of themselves. Used on review cards and at the top of the full review.
 - "Find …" became "Add “Title” to watchlist" (cards and the bottom of the full review; hidden on title pages, which have their own button). It matches the headline's title and year on TMDB (`src/lib/reviewMatch.ts`), adds with Undo, then shows "On your watchlist · Open"; with no sure match it opens Search to pick.
 - Checked: typecheck, build, 107 unit tests, 16 Playwright tests (reviews checks added), screenshots.
+
+---
+
+## 28. Nineteenth-round prompt (verbatim) and response
+
+> why are you not incrementing the version number automatically. hence forth, keep incrementing
+
+- My miss: three deploys after 0.3.0 kept the same number (and the lockfile was still at 0.2.0). Now 0.3.1, with a CHANGELOG entry for those changes.
+- The version has one source: `package.json`, read at build time (`vite.config.ts` `define` → `APP_VERSION`). The deploy also stamps the commit id (`VITE_BUILD_SHA`), shown in Settings ("build 1a2b3c4") and the footer tooltip, so every deploy is identifiable.
+- Rule (CLAUDE.md and assistant memory): every push to `main` bumps the version (patch for fixes, minor for features) with a dated CHANGELOG entry. `tests/appInfo.test.ts` fails if the app version, `package.json`, the lockfile and the top CHANGELOG entry disagree.
+
+> in the homepage, in  Feeling lucky, or movie suggestions once I add it to a list either watched or watchlist, you can remove this item and show a new one on its place.
+
+- Home suggestion rows (Movies/Shows for you, World picks, this week's language) and Feeling lucky keep their slots: when a shown title is saved, watched, 👍/❤️ or 👎, the next candidate takes that exact slot and the rest don't move; Undo puts the original back (`src/lib/slots.ts`, `useSlots` in `Home.tsx`). The rows also skip titles already on the watchlist. Feeling lucky picks got inline ＋ and 👎 (`QuickActions inline`); picks that were already on the watchlist (the nudge) stay until acted on.
+- Part of 0.3.1 (not yet published when asked). Checked: typecheck, build, 110 unit tests (`tests/slots.test.ts`), 16 Playwright tests (row size kept, saved title replaced, lucky pick replaced).
