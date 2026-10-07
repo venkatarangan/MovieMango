@@ -41,6 +41,7 @@ test('quick ＋ and 👎 on posters, genre and person pages, list tools', async 
     await expect(movies.getByRole('button', { name: 'Scroll left' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Mangoidiots' })).toHaveAttribute('href', 'https://mangoidiots.com');
     await expect(page.getByText(/🧠 Local AI by default/)).toBeVisible();
+    await expect(page.getByRole('link', { name: /^v\d+\.\d+\.\d+$/ })).toHaveAttribute('href', /CHANGELOG\.md$/);
   }
   await page.screenshot({ path: shot('40-home-actions', p), fullPage: true });
 

@@ -6,6 +6,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
 import { AppBar, BottomNavigation, BottomNavigationAction, Box, Button, Container, Link, Paper, Toolbar, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { APP_VERSION, SOURCE_URL } from '../lib/appInfo';
 import { SyncIndicator } from './Drive';
 import { Wordmark } from './Logo';
 
@@ -72,7 +73,10 @@ export default function Layout() {
           <Container maxWidth="lg" sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="body2" color="text.secondary">
               🔒 Private · 💸 Free · 🔓 Open · 🧠 Local AI by default — <Link component={RouterLink} to="/about" color="inherit">About</Link> ·{' '}
-              <Link component={RouterLink} to="/privacy" color="inherit">Privacy</Link>
+              <Link component={RouterLink} to="/privacy" color="inherit">Privacy</Link> ·{' '}
+              <Link href={`${SOURCE_URL}/blob/main/CHANGELOG.md`} target="_blank" rel="noopener noreferrer" color="inherit" title="What’s new">
+                v{APP_VERSION}
+              </Link>
             </Typography>
             <Typography variant="caption" color="text.secondary">
               Data from TMDB (not endorsed or certified by TMDB) · Streaming availability by JustWatch · Reviews by{' '}
