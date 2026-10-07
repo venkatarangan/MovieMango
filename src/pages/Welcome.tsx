@@ -8,6 +8,7 @@ import { ChipGroup } from '../components/ChipGroup';
 import { ErrorNote } from '../components/common';
 import EngineCard from '../components/EngineCard';
 import { GoogleSignInButton } from '../components/Drive';
+import { SmallFooter } from '../components/Layout';
 import { TmdbKeyForm } from '../components/KeyForms';
 import { db } from '../db';
 import { driveConfigured } from '../sync/google';
@@ -209,6 +210,7 @@ export default function Welcome() {
                 ['🔒 Private', 'Your data stays in your browser'],
                 ['💸 Free', 'No ads, no subscriptions'],
                 ['🔓 Open', 'MIT-licensed source code'],
+                ['🧠 Local AI', 'Runs on your device by default'],
               ].map(([t, d]) => (
                 <Box key={t} sx={{ px: 2 }}>
                   <Typography sx={{ fontWeight: 700 }}>{t}</Typography>
@@ -344,6 +346,7 @@ export default function Welcome() {
             Back
           </Button>
         )}
+        <SmallFooter />
       </Container>
     </Box>
   );

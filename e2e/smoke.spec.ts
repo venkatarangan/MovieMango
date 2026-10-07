@@ -13,6 +13,9 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await page.goto('/');
   await expect(page).toHaveURL(/#\/welcome/);
   await expect(page.getByRole('heading', { name: /Ripe picks for your mood/ })).toBeVisible();
+  // Even before setup: the small footer with the version.
+  await expect(page.getByRole('link', { name: /^v\d+\.\d+\.\d+$/ })).toHaveAttribute('href', /CHANGELOG\.md$/);
+  await expect(page.getByText('🧠 Local AI', { exact: true })).toBeVisible();
   await page.screenshot({ path: shot('01-welcome', p), fullPage: true });
 
   await page.getByRole('button', { name: /Get started/ }).click();

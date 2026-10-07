@@ -978,3 +978,7 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 - Desktop footer ends with `v0.3.0`, linked to `CHANGELOG.md` on GitHub.
 - Phones had no footer (the fixed tab bar replaces it). Now a short footer ends each page's content: the four pillars, then About · Privacy · Mangoidiots · version. Settings also ends with "MovieMango v0.3.0 · What's new".
 - Checked: typecheck, build, 107 unit tests, 16 Playwright tests, phone screenshots.
+
+> right in the welcomescreen, pre setup, version and smaller footer has to be visible.
+
+- Welcome (all steps, all screen sizes) ends with the small footer (pillars, About · Privacy · Mangoidiots · version), shared as `SmallFooter` in `Layout.tsx`. The Welcome hero also lists the fourth pillar, 🧠 Local AI.
