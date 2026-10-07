@@ -106,6 +106,7 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
 
   await page.goto('/#/settings');
   await expect(page.getByRole('heading', { name: 'Settings' })).toBeVisible();
+  await expect(page.getByText(/^MovieMango v\d+\.\d+\.\d+/)).toBeVisible();
   await page.screenshot({ path: shot('12-settings', p), fullPage: true });
 
   await page.goto('/#/about');

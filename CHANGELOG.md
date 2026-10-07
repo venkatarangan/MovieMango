@@ -9,7 +9,7 @@
 - Cast and director pages: tap a name to see everything they acted in or directed.
 - Discovery beyond your languages: a 🌏 World picks row and a weekly language row on Home, and "Any language (subtitles OK)" in Tonight.
 - Lighter Drive sync: changes made within 2 minutes go up together, and it also syncs when you open, leave or come back to the app. Retries politely when Google is busy.
-- Arrows on Home rows for mouse users; footer links Mangoidiots and says "Local AI by default".
+- Arrows on Home rows for mouse users; the footer links Mangoidiots, says "Local AI by default" and shows the version (linked to this changelog). Phones get a short footer at the end of each page, and Settings shows the version too.
 
 ## 0.2.0 (2026-10-03)
 

@@ -1,7 +1,7 @@
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
 import PlaylistAddRoundedIcon from '@mui/icons-material/PlaylistAddRounded';
 import UploadRoundedIcon from '@mui/icons-material/UploadRounded';
-import { Box, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Box, Button, Card, CardContent, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, Link, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router';
@@ -16,6 +16,7 @@ import { useToast } from '../components/Toast';
 import { db } from '../db';
 import { saveSettings, useSettings } from '../db/settings';
 import { analyticsConfigured } from '../lib/analytics';
+import { APP_VERSION, SOURCE_URL } from '../lib/appInfo';
 import { createBackup, restoreBackup } from '../lib/backup';
 import { LANGUAGES } from '../lib/languages';
 import { SERVICES } from '../lib/providers';
@@ -179,6 +180,13 @@ export default function SettingsPage() {
           </Box>
         </Section>
       </Stack>
+
+      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 3 }}>
+        MovieMango v{APP_VERSION} ·{' '}
+        <Link href={`${SOURCE_URL}/blob/main/CHANGELOG.md`} target="_blank" rel="noopener noreferrer" color="inherit">
+          What’s new
+        </Link>
+      </Typography>
 
       <Dialog open={confirmReset} onClose={() => setConfirmReset(false)}>
         <DialogTitle>Erase everything?</DialogTitle>

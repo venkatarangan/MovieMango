@@ -36,13 +36,14 @@ test('quick ＋ and 👎 on posters, genre and person pages, list tools', async 
   await expect(movies.getByText(hidden, { exact: true })).toHaveCount(0);
 
   if (desktop) {
-    // Mouse users get arrows on rows; the footer links Mangoidiots and says the AI is local.
+    // Mouse users get arrows on rows.
     await movies.getByRole('button', { name: 'Scroll right' }).click();
     await expect(movies.getByRole('button', { name: 'Scroll left' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Mangoidiots' })).toHaveAttribute('href', 'https://mangoidiots.com');
-    await expect(page.getByText(/🧠 Local AI by default/)).toBeVisible();
-    await expect(page.getByRole('link', { name: /^v\d+\.\d+\.\d+$/ })).toHaveAttribute('href', /CHANGELOG\.md$/);
   }
+  // Every page ends with a footer (on phones, a short one above the tab bar): Mangoidiots, local AI, version.
+  await expect(page.getByRole('link', { name: 'Mangoidiots' })).toHaveAttribute('href', 'https://mangoidiots.com');
+  await expect(page.getByText(/🧠 Local AI by default/)).toBeVisible();
+  await expect(page.getByRole('link', { name: /^v\d+\.\d+\.\d+$/ })).toHaveAttribute('href', /CHANGELOG\.md$/);
   await page.screenshot({ path: shot('40-home-actions', p), fullPage: true });
 
   // Genre chip → the genre page, 100 at a time, with typed filters.
