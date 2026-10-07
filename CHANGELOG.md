@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2 (2026-10-07)
+
+- Tonight: each pick has Watchlist (also skips it tonight), Watched, Liked it, Loved it and Not for me; the pick leaves the list, with Undo. "Later" and "Not tonight" are folded into Watchlist.
+- Tonight remembers your last picks and choices while the tab is open: leave and come back, and they're still there until you find new ones.
+
 ## 0.3.1 (2026-10-07)
 
 - The version is in every footer (linked to this changelog), in Settings, and on the Welcome screens. Phones get a short footer at the end of each page.

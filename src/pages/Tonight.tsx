@@ -1,9 +1,11 @@
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
-import ThumbDownOffAltRoundedIcon from '@mui/icons-material/ThumbDownOffAltRounded';
 import BookmarkAddRoundedIcon from '@mui/icons-material/BookmarkAddRounded';
-import NightsStayRoundedIcon from '@mui/icons-material/NightsStayRounded';
+import CheckCircleOutlineRoundedIcon from '@mui/icons-material/CheckCircleOutlineRounded';
+import FavoriteBorderRoundedIcon from '@mui/icons-material/FavoriteBorderRounded';
+import ThumbDownOffAltRoundedIcon from '@mui/icons-material/ThumbDownOffAltRounded';
+import ThumbUpOffAltRoundedIcon from '@mui/icons-material/ThumbUpOffAltRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
-import { Alert, Box, Button, Card, CardContent, Chip, Collapse, LinearProgress, Menu, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, ButtonBase, Card, CardContent, Chip, Collapse, LinearProgress, Menu, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router';
 import { ENGINE_LABELS } from '../ai/types';
@@ -16,35 +18,83 @@ import { Poster } from '../components/PosterCard';
 import { useToast } from '../components/Toast';
 import { PlayButtons } from '../components/WhereToWatch';
 import { db } from '../db';
-import { markNotTonight, setRating, toggleList, useAllItems } from '../db/items';
+import { markNotTonight, restoreItem, setRating, toggleList, useAllItems } from '../db/items';
 import { saveSettings, useSettings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
 import { formatRuntime } from '../lib/format';
 import { genreName } from '../lib/genres';
 import { languageName } from '../lib/languages';
+import { itemKey, type MyRating } from '../lib/types';
 import { AUDIENCES, DEFAULT_WANT, defaultMinutes, DISCOVERY, MINUTES, MOODS_NOW, partOfDay, WANTS, type MoodNow } from '../reco/moods';
 import { planTonight, type Pick, type TonightInput, type TonightResult } from '../reco/tonight';
 
 const STORE_KEY = 'mm.tonight';
+/** The last run's picks, so leaving Tonight and coming back shows them again (this tab only). */
+const LAST_KEY = 'mm.tonight.last';
 
 function loadInput(): TonightInput {
   const fresh: TonightInput = { minutes: defaultMinutes(), discovery: 'new', audience: 'solo', type: 'either' };
   try {
     const saved = JSON.parse(sessionStorage.getItem(STORE_KEY) ?? 'null');
-    return saved ? { ...fresh, ...saved, freeText: '' } : fresh;
+    return saved ? { ...fresh, ...saved } : fresh;
   } catch {
     return fresh;
   }
 }
+
+interface LastRun {
+  result: TonightResult;
+  /** Picks acted on (`movie:123`), so they stay gone. */
+  hidden: string[];
+  at: number;
+}
+
+function loadLast(): LastRun | null {
+  try {
+    const last = JSON.parse(sessionStorage.getItem(LAST_KEY) ?? 'null') as LastRun | null;
+    return last?.result?.picks ? last : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveLast(last: LastRun) {
+  try {
+    sessionStorage.setItem(LAST_KEY, JSON.stringify(last));
+  } catch {
+    /* storage unavailable: picks just won't survive leaving the page */
+  }
+}
+
+type PickAction = 'watchlist' | 'watched' | MyRating;
+const ACTIONS: { key: PickAction; label: string; icon: React.ReactNode; done: string }[] = [
+  { key: 'watchlist', label: 'Watchlist', icon: <BookmarkAddRoundedIcon />, done: 'Added to Watchlist. We won’t suggest it again tonight.' },
+  { key: 'watched', label: 'Watched', icon: <CheckCircleOutlineRoundedIcon />, done: 'Marked as watched' },
+  { key: 'like', label: 'Liked it', icon: <ThumbUpOffAltRoundedIcon />, done: '👍 Liked, and marked as watched' },
+  { key: 'love', label: 'Loved it', icon: <FavoriteBorderRoundedIcon />, done: '❤️ Loved, and marked as watched' },
+  { key: 'dislike', label: 'Not for me', icon: <ThumbDownOffAltRoundedIcon />, done: '👎 Not for me. We won’t suggest it again.' },
+];
 
 function greeting() {
   const p = partOfDay();
   return p === 'late night' ? 'Burning the midnight oil?' : `Good ${p === 'night' ? 'evening' : p}!`;
 }
 
-function PickCard({ pick, myServices, onHide }: { pick: Pick; myServices: string[]; onHide: () => void }) {
+/** A pick with Play and five actions; acting on it takes it off the list (Undo puts it back). */
+function PickCard({ pick, myServices, onHide, onUnhide }: { pick: Pick; myServices: string[]; onHide: () => void; onUnhide: () => void }) {
   const toast = useToast();
   const s = pick.snap;
+  const act = async (a: (typeof ACTIONS)[number]) => {
+    const prev = await db.items.get(itemKey(s.type, s.tmdbId));
+    if (a.key === 'watchlist') {
+      await toggleList(s, 'watchlist', true);
+      await markNotTonight(s, 1);
+    } else if (a.key === 'watched') await toggleList(s, 'watched', true);
+    else await setRating(s, a.key);
+    trackEvent('feedback', { kind: a.key });
+    onHide();
+    toast(a.done, 'info', { label: 'Undo', onClick: () => void restoreItem(s, prev).then(onUnhide) });
+  };
   const meta = [s.year, s.type === 'tv' ? 'Series' : 'Movie', s.runtime ? formatRuntime(s.runtime) + (s.type === 'tv' ? '/ep' : '') : '', languageName(s.originalLanguage), pick.certification]
     .filter(Boolean)
     .join(' · ');
@@ -79,19 +129,22 @@ function PickCard({ pick, myServices, onHide }: { pick: Pick; myServices: string
             </Box>
           )}
           <PlayButtons availability={pick.availability} title={s.title} myServices={myServices} compact />
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 'auto' }}>
-            <Button size="small" startIcon={<BookmarkAddRoundedIcon />} color="inherit" onClick={async () => { await toggleList(s, 'watchlist', true); toast('Added to Watchlist', 'info'); }}>
-              Later
-            </Button>
-            <Button size="small" startIcon={<NightsStayRoundedIcon />} color="inherit" onClick={async () => { await markNotTonight(s); trackEvent('feedback', { kind: 'not_tonight' }); onHide(); }}>
-              Not tonight
-            </Button>
-            <Button size="small" startIcon={<ThumbDownOffAltRoundedIcon />} color="inherit" onClick={async () => { await setRating(s, 'dislike'); trackEvent('feedback', { kind: 'dislike' }); toast('Got it, we won’t suggest it again. It’s in Library → Not for me.', 'info'); onHide(); }}>
-              Not for me
-            </Button>
-          </Box>
         </Box>
       </CardContent>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', borderTop: 1, borderColor: 'divider' }}>
+        {ACTIONS.map((a) => (
+          <ButtonBase
+            key={a.key}
+            onClick={() => void act(a)}
+            sx={{ flexDirection: 'column', gap: 0.25, py: 1, color: 'text.secondary', '&:hover': { bgcolor: 'action.hover', color: 'text.primary' }, '& svg': { fontSize: 20 } }}
+          >
+            {a.icon}
+            <Typography variant="caption" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+              {a.label}
+            </Typography>
+          </ButtonBase>
+        ))}
+      </Box>
     </Card>
   );
 }
@@ -103,9 +156,20 @@ export default function Tonight() {
   const [input, setInput] = useState<TonightInput>(loadInput);
   const [running, setRunning] = useState(false);
   const [stage, setStage] = useState('');
-  const [result, setResult] = useState<TonightResult | null>(null);
+  const [last] = useState(loadLast);
+  const [result, setResult] = useState<TonightResult | null>(last?.result ?? null);
+  const [resultAt, setResultAt] = useState(last?.at ?? 0);
   const [error, setError] = useState<unknown>(null);
-  const [hidden, setHidden] = useState<Set<number>>(new Set());
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set(last?.hidden ?? []));
+  /** Hides or brings back a pick, and remembers it with the saved run. */
+  const setPickHidden = (key: string, on: boolean) =>
+    setHidden((h) => {
+      const next = new Set(h);
+      if (on) next.add(key);
+      else next.delete(key);
+      if (result) saveLast({ result, hidden: [...next], at: resultAt });
+      return next;
+    });
   const [moreOpen, setMoreOpen] = useState(false);
   const [engineAnchor, setEngineAnchor] = useState<HTMLElement | null>(null);
 
@@ -113,8 +177,7 @@ export default function Tonight() {
     const next = { ...input, ...patch };
     setInput(next);
     try {
-      const { freeText: _, ...rest } = next;
-      sessionStorage.setItem(STORE_KEY, JSON.stringify(rest));
+      sessionStorage.setItem(STORE_KEY, JSON.stringify(next));
     } catch {
       /* storage unavailable */
     }
@@ -130,7 +193,10 @@ export default function Tonight() {
     try {
       const all = await db.items.toArray();
       const r = await planTonight(input, settings, all, engine, setStage);
+      const at = Date.now();
       setResult(r);
+      setResultAt(at);
+      saveLast({ result: r, hidden: [], at });
       trackEvent('tonight', { engine: r.engineUsed, minutes: String(input.minutes), discovery: input.discovery, typed: !!input.freeText });
     } catch (e) {
       setError(e);
@@ -142,7 +208,8 @@ export default function Tonight() {
 
   if (!settings) return null;
   const noAi = !choice?.id && settings.aiEngine !== 'basic';
-  const picks = result?.picks.filter((p) => !hidden.has(p.snap.tmdbId)) ?? [];
+  const pickKey = (p: Pick) => itemKey(p.snap.type, p.snap.tmdbId);
+  const picks = result?.picks.filter((p) => !hidden.has(pickKey(p))) ?? [];
 
   return (
     <Box>
@@ -290,6 +357,7 @@ export default function Tonight() {
             </Typography>
             <Typography variant="caption" color="text.secondary">
               {result.engineUsed === 'ai' ? `Chosen by ${choice?.id ? ENGINE_LABELS[choice.id] : 'AI'}` : 'Ranked without AI'} from {result.considered} titles
+              {resultAt > 0 && ` · ${new Date(resultAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`}
             </Typography>
           </Box>
           {result.aiError && settings.aiEngine !== 'basic' && (
@@ -300,9 +368,19 @@ export default function Tonight() {
           {picks.length ? (
             <Stack spacing={2}>
               {picks.map((p) => (
-                <PickCard key={`${p.snap.type}:${p.snap.tmdbId}`} pick={p} myServices={settings.services} onHide={() => setHidden(new Set([...hidden, p.snap.tmdbId]))} />
+                <PickCard
+                  key={pickKey(p)}
+                  pick={p}
+                  myServices={settings.services}
+                  onHide={() => setPickHidden(pickKey(p), true)}
+                  onUnhide={() => setPickHidden(pickKey(p), false)}
+                />
               ))}
             </Stack>
+          ) : result.picks.length ? (
+            <EmptyState emoji="✅" title="You’ve sorted every pick">
+              Tap Find new picks for more, or change your time and mood first.
+            </EmptyState>
           ) : (
             <EmptyState emoji="🍿" title="Nothing fits all of that tonight">
               Try more time or another mood, or add services and languages in Settings.
