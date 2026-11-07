@@ -94,7 +94,7 @@ export default function About() {
         Streaming availability by {ext('https://www.justwatch.com/in', 'JustWatch')}. Reviews and mango ratings by {ext('https://mangoidiots.com', 'Mangoidiots')}. Summaries from {ext('https://www.wikipedia.org/', 'Wikipedia')} (CC BY-SA). AI by Google (Gemini) and the Qwen team (via {ext('https://github.com/mlc-ai/web-llm', 'WebLLM')}).
       </Typography>
 
-      <Typography variant="subtitle2" component="h2" color="text.secondary" sx={{ mt: 4 }}>
+      <Typography variant="h5" component="h2" sx={{ mt: 4, mb: 1 }}>
         Books by the author
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 0.5 }}>

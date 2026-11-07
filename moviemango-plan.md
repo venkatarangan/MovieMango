@@ -1061,3 +1061,11 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 - The "Backup after every publish" rule is removed from `CLAUDE.md`; no backup step after pushes.
 - Released with 0.3.3. PII and secrets scan of everything committed was clean; personal notes and the backup marker stay untracked. Light checks only (typecheck, unit tests).
 
+
+---
+
+## 33. Twenty-fourth-round prompt (verbatim) and response
+
+> the Books by the author section in about is not like the other headings, make them the same.
+
+- The heading uses the same style as Credits and the other About headings (h5). 0.3.4.

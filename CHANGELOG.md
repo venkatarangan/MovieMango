@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4 (2026-11-07)
+
+- About: the "Books by the author" heading now matches the other section headings.
+
 ## 0.3.3 (2026-11-07)
 
 - Tonight shows 10 picks instead of 6, and keeps up to 10 more in reserve: when you sort a pick (Watchlist, Watched, Liked, Loved, Not for me), the next one slides in. Your AI explains the first 10; the reserve has plain reasons, so a small on-device model isn't asked to write 20 reasons at once.
