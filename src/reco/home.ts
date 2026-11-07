@@ -5,9 +5,7 @@ import { MOVIE_GENRES, TV_GENRES } from '../lib/genres';
 import { otherLanguages } from '../lib/languages';
 import { availabilityFrom, resolveProviderIds, type Availability } from '../lib/providers';
 import type { MediaType, TitleSnapshot, UserItem } from '../lib/types';
-import { defaultMinutes } from './moods';
 import { buildProfile, topGenres } from './profile';
-import { planTonight, type TonightInput, type TonightResult } from './tonight';
 
 /** Small seeded PRNG so a shuffle stays stable for one Home visit. */
 export function seeded(seed: number) {
@@ -113,12 +111,6 @@ export async function languageShelf(settings: Settings, date = new Date()): Prom
     if (titles.length >= 4) return { language, titles };
   }
   return null;
-}
-
-/** Tonight's pipeline without AI, with time-of-day defaults and a smaller shortlist: instant "feeling lucky" picks. */
-export function luckyPicks(settings: Settings, items: UserItem[], round = 0): Promise<TonightResult> {
-  const input: TonightInput = { minutes: defaultMinutes(), discovery: round % 2 ? 'surprise' : 'new', audience: 'solo', type: 'either' };
-  return planTonight(input, settings, items, null, undefined, { enrich: 12 });
 }
 
 export interface StreamingNow {

@@ -54,7 +54,7 @@ export async function rerank(engine: AiEngine, context: string, candidates: Rera
   const system = `${PERSONA}
 Choose the ${count} best titles for this viewer right now, ONLY from the numbered CANDIDATES.
 Put the best first. Make the last one a bolder "wild card" if a good one exists.
-For each, write "why": one friendly sentence (max 25 words) tying it to their taste, mood and time.
+For each, write "why": one friendly sentence (max 20 words) tying it to their taste, mood and time.
 Reply as JSON: {"picks":[{"n":<candidate number>,"why":"..."}]}`;
   const user = `${context}
 

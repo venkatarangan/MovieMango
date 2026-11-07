@@ -5,7 +5,8 @@ import { DAY } from './http';
  * Recent-titles store: full TMDB details for the last RECENT_MAX titles viewed or fetched, LRU by last access.
  * Lives in its own Dexie table so the general cache prune never evicts it. A session Map sits in front of it.
  */
-export const RECENT_MAX = 100;
+/** Sized so several Tonight runs (about 25 titles each, different moods) don't evict each other's details. */
+export const RECENT_MAX = 250;
 /** Watch-provider availability older than this is refreshed in the background (the old copy is served meanwhile). */
 export const PROVIDERS_FRESH_MS = 2 * DAY;
 /** Core metadata (title, credits, genres, poster…) is served this long before a full refetch. */

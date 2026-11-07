@@ -1020,3 +1020,44 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 - Each pick ends with an action bar: Watchlist · Watched · Liked it · Loved it · Not for me. Acting takes the pick off the list; the toast's Undo restores the item (incl. `notTonightUntil`, now part of `restoreItem`) and the pick. When every pick is sorted: "You've sorted every pick".
 - Tonight keeps the last run in `sessionStorage` (`mm.tonight.last`: picks, hidden picks, time) and all selections incl. the typed request (`mm.tonight`), so leaving and coming back shows them until "Find new picks". The header shows when the picks were made. Tab-only, like before.
 - 0.3.2. Checked: typecheck, build, 110 unit tests, 16 Playwright tests (smoke covers an action removing a pick and the picks surviving navigation), screenshots.
+
+---
+
+## 30. Twenty-first-round prompt (verbatim) and response
+
+> in https://watch.mangoidiots.com/#/tonight as I add items to the list and it gets removed, show a new one, may be initially keep a larger buffer list to keep showing. and the tonight suggestions can be a longer list say 10 to 20 items - can the local model handle this?
+
+- Tonight now keeps up to 20 picks: 10 shown, the rest in reserve; sorting a pick slides the next one in. The AI ranks and explains 10 from 20 candidates; the reserve is ranked by score with plain reasons.
+- Local model answer: 10 reasons fit (about 500 output tokens, 20 input lines about 2k tokens, inside Nano's ~6k window and Qwen's ~4k). 20 reasons would not (output over the 900-token cap, slow on 0.6B/1.7B, and weaker picks), hence the split. Details in `docs/architecture.md`.
+- 0.3.3. Tonight looks at titles in waves (see next round).
+
+---
+
+## 31. Twenty-second-round prompt (verbatim) and response
+
+> do a thorough check of the tonight page to ensure unnecessary load doesnt go to tmdb and everything is cached, coming back to the page again doesnt show an empty page. also in the homepage feeling lucky implement the same cache and logic as in tonight page, so that we can use the same data pipeline for similar functionality, as the user makes changes in tonight page, the homepage feeling lucky changes too.
+
+- **Audit.** HTTP caching was already sound (memory → IndexedDB → network; discover 12 h, details 30 d, providers 2 d; a repeat run costs 0 calls). Gaps fixed: details were enriched in one big batch (now waves, only more while too few titles pass); the recent-titles store held 100 titles (now 250) so moods evicted each other; Mangoidiots lookups ran for all 24 finalists (now top 16); the last run lived only in `sessionStorage`, and the 0.3.2 restore silently dropped each service's search link (functions don't survive JSON), so it was fixed along the way.
+- **Shared state.** `src/reco/tonightState.ts` holds Tonight's choices and run in memory plus IndexedDB (6 h, same services/languages only). Tonight and Home read it; if no run is valid, either page makes a quick one without AI (so Tonight is never empty), and "Find my picks" runs the AI and replaces it.
+- **Home.** Feeling lucky shows the first three open picks of that run; sorting a pick on either page makes way for the next one on both; Shuffle moves to the next three. `luckyPicks` removed.
+- Checked: typecheck, 120 unit tests (new `tests/tonightState.test.ts`), 16 Playwright tests (sorting on Tonight hides the pick on Home, reload keeps the run, zero TMDB calls after reload).
+
+---
+
+## 32. Twenty-third-round prompts (verbatim) and response
+
+> add drafts folder to gitignore; use the github noreply email id
+>
+> check whether the files here are in sync with the github live. also use ~/tempu for temporary files, as I am calling you from wsl, the folder is in windows mount and may be slow, so copy only the finished files there.
+>
+> in the about page I would like to subtly add a promotion to my books. i have kept the proposed text with hyperlinks at drafts folder in a file called books.md. remember it has to be subtle.
+>
+> change the backup rules, i don't want you to copy the files or do any backup henceforth, remove that rule entirely.
+>
+> fine, go ahead, commit and publish all the changes to github, verify the changes alone quickly, no need to do extensively tests now. ensure there are no pii in local before publish
+
+- `drafts/` is git-ignored; commits use the GitHub noreply address. Live matched `origin/main` (0.3.2, build b01a6fa) before this release.
+- About: a small grey "Books by the author" note with three links under Credits (text from `books.md`).
+- The "Backup after every publish" rule is removed from `CLAUDE.md`; no backup step after pushes.
+- Released with 0.3.3. PII and secrets scan of everything committed was clean; personal notes and the backup marker stay untracked. Light checks only (typecheck, unit tests).
+

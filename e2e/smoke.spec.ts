@@ -60,16 +60,32 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await expect(page.getByText(/Ranked without AI/)).toBeVisible();
   await page.screenshot({ path: shot('07-picks', p), fullPage: true });
   // Watchlist, Watched, Liked it, Loved it or Not for me takes a pick off the list (Undo is in the toast).
-  const pickCount = await page.getByRole('button', { name: 'Loved it' }).count();
+  const loved = page.getByRole('button', { name: 'Loved it' });
+  const pickCount = await loved.count();
   expect(pickCount).toBeGreaterThan(1);
+  const firstPick = page.locator('a[href^="#/title/"]').first();
+  const acted = (await firstPick.getAttribute('href'))!;
   await page.getByRole('button', { name: 'Watchlist' }).first().click();
   await expect(page.getByText(/Added to Watchlist. We won’t suggest it again tonight/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Loved it' })).toHaveCount(pickCount - 1);
+  await expect(page.locator(`a[href="${acted}"]`)).toHaveCount(0);
+  // The next pick from the reserve slides in, so the list stays full while any are left.
+  const afterCount = await loved.count();
+  expect(afterCount).toBeGreaterThanOrEqual(pickCount - 1);
   // Leaving Tonight and coming back shows the same picks and selections, without running again.
   await page.getByRole('link', { name: 'Home' }).first().click();
+  await expect(page.getByRole('heading', { name: /Feeling lucky/ })).toBeVisible();
   await page.goto('/#/tonight');
   await expect(page.getByRole('heading', { name: 'Your picks' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Loved it' })).toHaveCount(pickCount - 1);
+  await expect(loved).toHaveCount(afterCount);
+  await expect(page.locator(`a[href="${acted}"]`)).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: /Tired/ })).toHaveAttribute('aria-checked', 'true');
+  // …and so does a full reload (the run is kept on the device, not only in the tab).
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Your picks' })).toBeVisible();
+  await expect(loved).toHaveCount(afterCount);
+  // Coming back costs no TMDB requests (dev builds count them in window.__tmdbCalls).
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(() => (window as unknown as { __tmdbCalls?: { total: number } }).__tmdbCalls?.total ?? 0)).toBe(0);
   await expect(page.getByRole('radio', { name: /Tired/ })).toHaveAttribute('aria-checked', 'true');
 
   // Home: search first, then three lucky picks and the shelves.
@@ -81,6 +97,8 @@ test('onboarding, Tonight picks, title page, library and settings', async ({ pag
   await expect(page.getByRole('link', { name: 'Tonight' }).first()).toBeVisible();
   const lucky = page.locator('.MuiCard-root', { has: page.getByRole('heading', { name: /Feeling lucky/ }) });
   await expect(lucky.locator('a[href^="#/title/"]').first()).toBeVisible({ timeout: 30_000 });
+  // Feeling lucky shows Tonight's picks: the one sorted there is gone here too.
+  await expect(lucky.locator(`a[href="${acted}"]`)).toHaveCount(0);
   await page.screenshot({ path: shot('06b-home', p), fullPage: true });
   await page.getByRole('combobox', { name: 'Search movies and TV shows' }).fill('Madras');
   await expect(page.getByRole('option', { name: /Madras Nights/ }).first()).toBeVisible();

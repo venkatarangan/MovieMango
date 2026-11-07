@@ -19,9 +19,10 @@ import { formatRuntime } from '../lib/format';
 import { languageName } from '../lib/languages';
 import { fillSlots } from '../lib/slots';
 import type { MediaType, TitleSnapshot, UserItem } from '../lib/types';
-import { languageShelf, luckyPicks, randomShelf, streamingNow, worldShelf } from '../reco/home';
+import { languageShelf, randomShelf, streamingNow, worldShelf } from '../reco/home';
 import { partOfDay } from '../reco/moods';
 import type { Pick } from '../reco/tonight';
+import { ensureTonightRun, hiddenKeys, useTonightState, validRun } from '../reco/tonightState';
 
 const SHELF_SIZE = 15;
 
@@ -163,19 +164,23 @@ function LuckyPick({ pick, services }: { pick: Pick; services: string[] }) {
   );
 }
 
-/** Three instant picks from Tonight's pipeline (no AI), with a shuffle and a link to the full Tonight page. */
+/**
+ * Three of Tonight's picks. Home and Tonight share one run (src/reco/tonightState.ts): if there isn't
+ * a fresh one, a quick run without AI is made here, and Tonight shows it too. Sorting a pick on either
+ * page makes way for the next one on both. Shuffle moves on to the next three.
+ */
 function FeelingLucky({ settings, items }: { settings: Settings; items: UserItem[] }) {
+  const { loaded, state, busy, error } = useTonightState();
   const [turn, setTurn] = useState(0);
-  const round = Math.floor(turn / 2);
-  const day = new Date().toDateString();
-  // Kept for the whole session: coming back to Home shouldn't recompute (or re-call TMDB).
-  const lucky = useQuery({ queryKey: ['lucky', day, partOfDay(), round], queryFn: () => luckyPicks(settings, items, round), staleTime: Infinity, gcTime: Infinity, enabled: !!settings.tmdbToken });
-  const picks = lucky.data?.picks ?? [];
-  // Odd turns show the second three first. A pick you save, watch or 👎 makes way for the next one;
-  // picks that were already on your watchlist (a nudge) stay until you act on them.
-  const ordered = picks.length > 3 && turn % 2 ? [...picks.slice(3), ...picks.slice(0, 3)] : picks;
-  const onWatchlist = useMemo(() => new Set(items.filter((i) => i.lists.includes('watchlist')).map((i) => i.key)), [lucky.data]); // eslint-disable-line react-hooks/exhaustive-deps
-  const hidden = new Set(items.filter((i) => i.lists.includes('watched') || i.rating === 'dislike' || (i.lists.includes('watchlist') && !onWatchlist.has(i.key))).map((i) => i.key));
+  const run = loaded ? validRun(state, settings) : undefined;
+  useEffect(() => {
+    if (loaded) void ensureTonightRun(settings);
+  }, [loaded, settings, run]);
+  const all = run?.result.picks ?? [];
+  const shift = all.length > 3 ? (turn * 3) % all.length : 0;
+  const ordered = shift ? [...all.slice(shift), ...all.slice(0, shift)] : all;
+  // A pick you save, watch or 👎 (here or on Tonight) makes way for the next one; Undo puts it back.
+  const hidden = useMemo(() => (run ? hiddenKeys(run, items) : new Set<string>()), [run, items]);
   const shown = useSlots(ordered, (p) => keyOf(p.snap), hidden, 3);
 
   return (
@@ -187,11 +192,11 @@ function FeelingLucky({ settings, items }: { settings: Settings; items: UserItem
               🎲 Feeling lucky?
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Three picks for {forNow()}, on your services.
+              {run?.by === 'user' ? 'Three of your latest Tonight picks.' : `Three picks for ${forNow()}, on your services.`}
             </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button color="inherit" startIcon={<CasinoRoundedIcon />} disabled={lucky.isFetching} onClick={() => { setTurn(turn + 1); trackEvent('lucky_shuffle'); }}>
+            <Button color="inherit" startIcon={<CasinoRoundedIcon />} disabled={busy || all.length <= 3} onClick={() => { setTurn(turn + 1); trackEvent('lucky_shuffle'); }}>
               Shuffle
             </Button>
             <Button component={RouterLink} to="/tonight" variant="contained" endIcon={<ArrowForwardRoundedIcon />}>
@@ -199,8 +204,8 @@ function FeelingLucky({ settings, items }: { settings: Settings; items: UserItem
             </Button>
           </Box>
         </Box>
-        <ErrorNote error={lucky.error} />
-        {lucky.isFetching && !shown.length ? (
+        <ErrorNote error={run ? null : error} />
+        {(!loaded || busy) && !shown.length ? (
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
             {[0, 1, 2].map((i) => (
               <Box key={i} sx={{ display: 'flex', gap: 1.5, ...(i > 0 && { display: { xs: 'none', md: 'flex' } }) }}>
@@ -214,15 +219,16 @@ function FeelingLucky({ settings, items }: { settings: Settings; items: UserItem
             ))}
           </Box>
         ) : shown.length ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2, opacity: lucky.isFetching ? 0.5 : 1 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
             {shown.map((p) => (
-              <LuckyPick key={`${p.snap.type}:${p.snap.tmdbId}`} pick={p} services={settings.services} />
+              <LuckyPick key={keyOf(p.snap)} pick={p} services={settings.services} />
             ))}
           </Box>
         ) : (
-          lucky.isSuccess && (
+          run && (
             <Typography color="text.secondary">
-              Nothing fits right now. Try <RouterLink to="/tonight">Tonight</RouterLink> with more time, or add services and languages in Settings.
+              {all.length ? 'You’ve sorted every pick. ' : 'Nothing fits right now. '}
+              Try <RouterLink to="/tonight">Tonight</RouterLink> {all.length ? 'for more' : 'with more time, or add services and languages in Settings'}.
             </Typography>
           )
         )}

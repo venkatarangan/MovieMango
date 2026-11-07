@@ -94,6 +94,18 @@ export default function About() {
         Streaming availability by {ext('https://www.justwatch.com/in', 'JustWatch')}. Reviews and mango ratings by {ext('https://mangoidiots.com', 'Mangoidiots')}. Summaries from {ext('https://www.wikipedia.org/', 'Wikipedia')} (CC BY-SA). AI by Google (Gemini) and the Qwen team (via {ext('https://github.com/mlc-ai/web-llm', 'WebLLM')}).
       </Typography>
 
+      <Typography variant="subtitle2" component="h2" color="text.secondary" sx={{ mt: 4 }}>
+        Books by the author
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 0.5 }}>
+        If you enjoy this project, you may also like the books Venkatarangan Thirumalai has written:
+      </Typography>
+      <Box component="ul" sx={{ pl: 2.5, my: 0, color: 'text.secondary', fontSize: '0.875rem', '& li': { mb: 0.25 } }}>
+        <li>{ext('https://thefoundercatalyst.com/fcbook/', 'The Founder Catalyst')}: a practical field guide to the founder-to-CEO journey</li>
+        <li>{ext('https://thefoundercatalyst.com/seyaligalinkathaibook/', 'Seyaligalin Kathai')} (செயலிகளின் கதை): the founding stories behind 52 mobile apps, in Tamil</li>
+        <li>{ext('https://thefoundercatalyst.com/nutpambook/', 'Nutpam')} (நுட்பம்): phones and computers explained, in Tamil</li>
+      </Box>
+
       <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
         v{APP_VERSION} · MIT · {ext(SOURCE_URL, 'Source on GitHub')} · <Link component={RouterLink} to="/privacy">Privacy</Link>
       </Typography>

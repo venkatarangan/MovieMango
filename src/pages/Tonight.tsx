@@ -6,7 +6,7 @@ import ThumbDownOffAltRoundedIcon from '@mui/icons-material/ThumbDownOffAltRound
 import ThumbUpOffAltRoundedIcon from '@mui/icons-material/ThumbUpOffAltRounded';
 import TuneRoundedIcon from '@mui/icons-material/TuneRounded';
 import { Alert, Box, Button, ButtonBase, Card, CardContent, Chip, Collapse, LinearProgress, Menu, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router';
 import { ENGINE_LABELS } from '../ai/types';
 import { ChipGroup } from '../components/ChipGroup';
@@ -25,46 +25,9 @@ import { formatRuntime } from '../lib/format';
 import { genreName } from '../lib/genres';
 import { languageName } from '../lib/languages';
 import { itemKey, type MyRating } from '../lib/types';
-import { AUDIENCES, DEFAULT_WANT, defaultMinutes, DISCOVERY, MINUTES, MOODS_NOW, partOfDay, WANTS, type MoodNow } from '../reco/moods';
-import { planTonight, type Pick, type TonightInput, type TonightResult } from '../reco/tonight';
-
-const STORE_KEY = 'mm.tonight';
-/** The last run's picks, so leaving Tonight and coming back shows them again (this tab only). */
-const LAST_KEY = 'mm.tonight.last';
-
-function loadInput(): TonightInput {
-  const fresh: TonightInput = { minutes: defaultMinutes(), discovery: 'new', audience: 'solo', type: 'either' };
-  try {
-    const saved = JSON.parse(sessionStorage.getItem(STORE_KEY) ?? 'null');
-    return saved ? { ...fresh, ...saved } : fresh;
-  } catch {
-    return fresh;
-  }
-}
-
-interface LastRun {
-  result: TonightResult;
-  /** Picks acted on (`movie:123`), so they stay gone. */
-  hidden: string[];
-  at: number;
-}
-
-function loadLast(): LastRun | null {
-  try {
-    const last = JSON.parse(sessionStorage.getItem(LAST_KEY) ?? 'null') as LastRun | null;
-    return last?.result?.picks ? last : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveLast(last: LastRun) {
-  try {
-    sessionStorage.setItem(LAST_KEY, JSON.stringify(last));
-  } catch {
-    /* storage unavailable: picks just won't survive leaving the page */
-  }
-}
+import { AUDIENCES, DEFAULT_WANT, DISCOVERY, MINUTES, MOODS_NOW, partOfDay, WANTS, type MoodNow } from '../reco/moods';
+import { planTonight, PICKS_SHOWN, type Pick } from '../reco/tonight';
+import { ensureTonightRun, openPicks, pickKey, retryTonightRun, setPickHidden, setTonightInput, setTonightRun, settingsSig, useTonightState, validRun } from '../reco/tonightState';
 
 type PickAction = 'watchlist' | 'watched' | MyRating;
 const ACTIONS: { key: PickAction; label: string; icon: React.ReactNode; done: string }[] = [
@@ -153,50 +116,32 @@ export default function Tonight() {
   const settings = useSettings();
   const items = useAllItems();
   const { engine, choice, progress, setPreferred } = useEngine();
-  const [input, setInput] = useState<TonightInput>(loadInput);
+  const { loaded, state, busy, error: autoError } = useTonightState();
+  const input = state.input;
+  const run = settings ? validRun(state, settings) : undefined;
   const [running, setRunning] = useState(false);
   const [stage, setStage] = useState('');
-  const [last] = useState(loadLast);
-  const [result, setResult] = useState<TonightResult | null>(last?.result ?? null);
-  const [resultAt, setResultAt] = useState(last?.at ?? 0);
   const [error, setError] = useState<unknown>(null);
-  const [hidden, setHidden] = useState<Set<string>>(() => new Set(last?.hidden ?? []));
-  /** Hides or brings back a pick, and remembers it with the saved run. */
-  const setPickHidden = (key: string, on: boolean) =>
-    setHidden((h) => {
-      const next = new Set(h);
-      if (on) next.add(key);
-      else next.delete(key);
-      if (result) saveLast({ result, hidden: [...next], at: resultAt });
-      return next;
-    });
   const [moreOpen, setMoreOpen] = useState(false);
   const [engineAnchor, setEngineAnchor] = useState<HTMLElement | null>(null);
 
-  const update = (patch: Partial<TonightInput>) => {
-    const next = { ...input, ...patch };
-    setInput(next);
-    try {
-      sessionStorage.setItem(STORE_KEY, JSON.stringify(next));
-    } catch {
-      /* storage unavailable */
-    }
-  };
+  const update = (patch: Partial<typeof input>) => setTonightInput({ ...input, ...patch });
+
+  // Never an empty page: if there is no fresh run, make a quick one without AI (the same pipeline and cache as Find).
+  useEffect(() => {
+    if (loaded && settings) void ensureTonightRun(settings);
+  }, [loaded, settings, run]);
 
   const signal = useMemo(() => (items ?? []).filter((i) => i.lists.some((l) => l !== 'watchlist') || i.rating).length, [items]);
 
-  const run = async () => {
+  const find = async () => {
     if (!settings) return;
     setRunning(true);
     setError(null);
-    setHidden(new Set());
     try {
       const all = await db.items.toArray();
       const r = await planTonight(input, settings, all, engine, setStage);
-      const at = Date.now();
-      setResult(r);
-      setResultAt(at);
-      saveLast({ result: r, hidden: [], at });
+      setTonightRun({ result: r, hidden: [], at: Date.now(), by: 'user', engineLabel: choice?.id ? ENGINE_LABELS[choice.id] : undefined, sig: settingsSig(settings) });
       trackEvent('tonight', { engine: r.engineUsed, minutes: String(input.minutes), discovery: input.discovery, typed: !!input.freeText });
     } catch (e) {
       setError(e);
@@ -206,10 +151,13 @@ export default function Tonight() {
     }
   };
 
-  if (!settings) return null;
+  if (!settings || !items || !loaded) return null;
   const noAi = !choice?.id && settings.aiEngine !== 'basic';
-  const pickKey = (p: Pick) => itemKey(p.snap.type, p.snap.tmdbId);
-  const picks = result?.picks.filter((p) => !hidden.has(pickKey(p))) ?? [];
+  const result = run?.result;
+  // Picks beyond the first ten wait in reserve; acting on a shown pick lets the next one slide in.
+  const left = run ? openPicks(run, items) : [];
+  const picks = left.slice(0, PICKS_SHOWN);
+  const reserve = left.length - picks.length;
 
   return (
     <Box>
@@ -316,12 +264,12 @@ export default function Tonight() {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
-                  void run();
+                  void find();
                 }
               }}
             />
-            <Button variant="contained" size="large" onClick={run} disabled={running || !settings.tmdbToken} startIcon={<AutoAwesomeRoundedIcon />} sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, px: 4, py: 1.25 }}>
-              {running ? 'Finding…' : result ? 'Find new picks' : 'Find my picks'}
+            <Button variant="contained" size="large" onClick={find} disabled={running || !settings.tmdbToken} startIcon={<AutoAwesomeRoundedIcon />} sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start' }, px: 4, py: 1.25 }}>
+              {running ? 'Finding…' : run?.by === 'user' ? 'Find new picks' : 'Find my picks'}
             </Button>
             {running && (
               <Box>
@@ -339,15 +287,29 @@ export default function Tonight() {
         </CardContent>
       </Card>
 
-      {signal < 3 && !result && (
+      {signal < 3 && run?.by !== 'user' && (
         <Alert severity="info" sx={{ mt: 2 }}>
           Tip: <RouterLink to="/search">search</RouterLink> for films you love and tap ❤️ Loved it. Picks get better the more MovieMango knows you.
         </Alert>
       )}
 
       <Box sx={{ mt: 2 }}>
-        <ErrorNote error={error} />
+        <ErrorNote error={error ?? (run ? null : autoError)} />
+        {!run && !!autoError && !busy && (
+          <Button size="small" sx={{ mt: 1 }} onClick={() => { retryTonightRun(); void ensureTonightRun(settings); }}>
+            Try again
+          </Button>
+        )}
       </Box>
+
+      {!result && busy && (
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="caption" color="text.secondary">
+            Finding something for you…
+          </Typography>
+          <LinearProgress sx={{ mt: 0.5, borderRadius: '6px' }} />
+        </Box>
+      )}
 
       {result && (
         <Box sx={{ mt: 3 }}>
@@ -356,14 +318,19 @@ export default function Tonight() {
               Your picks
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              {result.engineUsed === 'ai' ? `Chosen by ${choice?.id ? ENGINE_LABELS[choice.id] : 'AI'}` : 'Ranked without AI'} from {result.considered} titles
-              {resultAt > 0 && ` · ${new Date(resultAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`}
+              {result.engineUsed === 'ai' ? `Chosen by ${run?.engineLabel ?? 'AI'}` : 'Ranked without AI'} from {result.considered} titles
+              {run && ` · ${new Date(run.at).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`}
             </Typography>
           </Box>
           {result.aiError && settings.aiEngine !== 'basic' && (
             <Alert severity="warning" sx={{ mb: 2 }}>
               The AI step didn’t work this time ({result.aiError}), so these are ranked without AI.
             </Alert>
+          )}
+          {run?.by === 'auto' && choice?.id && choice.id !== 'basic' && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              A quick first look, made without AI. Tap Find my picks to have {ENGINE_LABELS[choice.id]} choose and explain.
+            </Typography>
           )}
           {picks.length ? (
             <Stack spacing={2}>
@@ -376,10 +343,15 @@ export default function Tonight() {
                   onUnhide={() => setPickHidden(pickKey(p), false)}
                 />
               ))}
+              {reserve > 0 && (
+                <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center' }}>
+                  {reserve} more {reserve === 1 ? 'pick is' : 'picks are'} ready. They appear as you sort these.
+                </Typography>
+              )}
             </Stack>
           ) : result.picks.length ? (
             <EmptyState emoji="✅" title="You’ve sorted every pick">
-              Tap Find new picks for more, or change your time and mood first.
+              Tap the button above for more, or change your time and mood first.
             </EmptyState>
           ) : (
             <EmptyState emoji="🍿" title="Nothing fits all of that tonight">

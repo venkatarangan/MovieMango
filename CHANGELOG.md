@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.3 (2026-11-07)
+
+- Tonight shows 10 picks instead of 6, and keeps up to 10 more in reserve: when you sort a pick (Watchlist, Watched, Liked, Loved, Not for me), the next one slides in. Your AI explains the first 10; the reserve has plain reasons, so a small on-device model isn't asked to write 20 reasons at once.
+- Tonight looks at titles in waves: 24 first (16 for the quick run), and more only while too few pass your filters. Mangoidiots reviews are checked for the top 16 only. A cold run is about 30 TMDB calls; a repeat costs none.
+- Tonight is never empty: your time and mood choices and your last picks are kept on the device (not just in the tab) for six hours, so leaving, reloading or reopening shows them again with no TMDB calls. If there are none yet, a quick run without AI is made, and "Find my picks" has your AI choose and explain.
+- Home's 🎲 Feeling lucky now shows Tonight's picks (same run, same cache). Sort a pick on either page and the next one takes its place on both; Shuffle moves on to the next three. If there's no run yet, Home makes the quick one that Tonight then shows.
+- The recent-titles store keeps 250 titles (was 100), so a few different moods don't evict each other's details.
+- Fixed: picks restored after leaving Tonight lost their service search links.
+- About: a small, quiet "Books by the author" note under Credits.
+
 ## 0.3.2 (2026-10-07)
 
 - Tonight: each pick has Watchlist (also skips it tonight), Watched, Liked it, Loved it and Not for me; the pick leaves the list, with Undo. "Later" and "Not tonight" are folded into Watchlist.

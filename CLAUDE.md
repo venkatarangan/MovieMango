@@ -34,6 +34,7 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 - Headless Chromium in WSL has no emoji font, so emoji show as boxes in screenshots; that's not an app bug. Pixel 7 emulation still reports `hover: hover`, so row arrows show in mobile screenshots (not on real phones).
 - Tests on `/mnt/c` (WSL) can stall (jsdom import takes minutes when the disk is busy). Run them from an rsync copy on the Linux filesystem with its own `npm ci`, excluding `*.tsbuildinfo` (a stale one hid a type error that then failed CI). Port 5199 must be free for Playwright.
 - `tsconfig.json` has no Node types (it covers `e2e` too), so specs can't import `node:*`; read downloads in the page instead.
+- IndexedDB can't store functions (a `ServiceDef` has a `search` function) and fails silently behind `.catch`: store service keys and look them up on load (`packState` in `src/reco/tonightState.ts`).
 - Custom titles have a **negative `tmdbId`**: never send one to TMDB (`isCustom()`).
 - TMDB responses are cached hard (`src/api/http.ts`, `src/api/recent.ts`); cached objects are shared, so don't mutate them. Every new TMDB call should go through `tmdbGet`.
 - Drive sync is batched (2-minute window, at most 3 Drive calls per sync, one sync at a time, backoff on 429/403 rate limits/5xx). Don't sync per change; see `docs/architecture.md`.

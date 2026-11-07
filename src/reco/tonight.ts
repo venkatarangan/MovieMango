@@ -66,6 +66,8 @@ export interface Pick {
   mango?: MangoRating;
   why: string;
   wildcard?: boolean;
+  /** Was already on the user's watchlist when picked (a nudge), so being on it doesn't count as acted on. */
+  onWatchlist?: boolean;
 }
 
 export interface TonightResult {
@@ -78,10 +80,24 @@ export interface TonightResult {
 
 export type Stage = (text: string) => void;
 
-const PICK_COUNT = 6;
-/** Details calls per cold run are the main TMDB cost, so keep this modest. */
-const ENRICH_COUNT = 20;
-const RERANK_POOL = 14;
+/** Picks the page shows at once; the AI chooses and explains exactly this many. */
+export const PICKS_SHOWN = 10;
+/** Picks kept in all: the rest wait in reserve and slide in as shown ones are acted on. */
+const PICKS_TOTAL = 20;
+/**
+ * Details calls per cold run are the main TMDB cost. Titles are looked at in waves: the first wave
+ * is usually enough; more are fetched only while too few titles pass the filters, up to MAX_ENRICH.
+ */
+const ENRICH_COUNT = 24;
+const ENRICH_MORE = 12;
+const MAX_ENRICH = 48;
+/** Reviews checked per run (one cached WordPress request each); the reserve doesn't need them. */
+const MANGO_CHECK = 16;
+/**
+ * Candidates sent to the AI. Small local models have small windows (Gemini Nano ~6k tokens,
+ * Qwen ~4k), so this stays at 20 lines of about 60 tokens each.
+ */
+const AI_POOL = 20;
 
 const GENRE_BY_NAME = new Map(
   [...Object.entries(MOVIE_GENRES), ...Object.entries(TV_GENRES)].map(([id, name]) => [name.toLowerCase(), Number(id)]),
@@ -174,7 +190,7 @@ export async function planTonight(
   items: UserItem[],
   engine: AiEngine | null,
   stage: Stage = () => {},
-  opts: { enrich?: number } = {},
+  opts: { enrich?: number; total?: number } = {},
 ): Promise<TonightResult> {
   let input: TonightInput = { ...rawInput, want: rawInput.want ?? (rawInput.moodNow ? DEFAULT_WANT[rawInput.moodNow] : undefined) };
   let aiError: string | undefined;
@@ -289,19 +305,9 @@ export async function planTonight(
     return list.sort((a, b) => b.score - a.score);
   };
 
-  const enrich = opts.enrich ?? ENRICH_COUNT;
-  stage(`Looking closer at ${Math.min(enrich, candidates.length)} titles…`);
-  const shortlist = scoreAll(candidates).slice(0, enrich);
-  await pLimit(shortlist, 6, async (c) => {
-    const d = await getDetails(c.snap.type, c.snap.tmdbId);
-    c.snap = { ...c.snap, ...snapshotFromDetails(d, c.snap.type) };
-    c.overview = d.overview || c.overview;
-    c.availability = availabilityFrom(d['watch/providers']?.results?.[settings.region]);
-    c.certification = certificationOf(d, settings.region);
-  });
-
+  const total = opts.total ?? PICKS_TOTAL;
   const mine = new Set(settings.services);
-  let finalists = shortlist.filter((c) => {
+  const passes = (c: Candidate) => {
     if (!rewatch && !c.availability.some((a) => mine.has(a.service.key))) return false;
     if (input.minutes !== 'binge' && timeFit(c.snap.runtime, input.minutes, c.snap.type) === 0) return false;
     if (certs && c.snap.type === 'movie') {
@@ -309,13 +315,32 @@ export async function planTonight(
       if (!certs.includes(c.certification)) return false;
     }
     return true;
-  });
-  finalists = scoreAll(finalists).slice(0, RERANK_POOL);
+  };
+  const enrichOne = async (c: Candidate) => {
+    const d = await getDetails(c.snap.type, c.snap.tmdbId);
+    c.snap = { ...c.snap, ...snapshotFromDetails(d, c.snap.type) };
+    c.overview = d.overview || c.overview;
+    c.availability = availabilityFrom(d['watch/providers']?.results?.[settings.region]);
+    c.certification = certificationOf(d, settings.region);
+  };
+
+  const byScore = scoreAll(candidates);
+  let finalists: Candidate[] = [];
+  let looked = 0;
+  while (looked < byScore.length && looked < MAX_ENRICH) {
+    const batch = byScore.slice(looked, looked + (looked === 0 ? (opts.enrich ?? ENRICH_COUNT) : ENRICH_MORE));
+    looked += batch.length;
+    stage(`Looking closer at ${looked} titles…`);
+    await pLimit(batch, 6, enrichOne);
+    finalists = scoreAll(byScore.slice(0, looked).filter(passes));
+    if (finalists.length >= total) break;
+  }
+  finalists = finalists.slice(0, total);
 
   if (settings.useMangoidiots && finalists.length) {
     stage('Checking Mangoidiots reviews…');
     await withTimeout(
-      pLimit(finalists, 3, async (c) => {
+      pLimit(finalists.slice(0, MANGO_CHECK), 3, async (c) => {
         const review = await findReview([c.snap.title], c.snap.year);
         c.mango = review?.rating;
         const adj = { delicious: 0.08, ripe: 0.05, raw: 0, rotten: -0.08 } as const;
@@ -336,6 +361,7 @@ export async function planTonight(
     mango: c.mango,
     why,
     wildcard,
+    onWatchlist: c.sources.has('watchlist') || undefined,
   });
 
   if (engine && finalists.length > 1) {
@@ -351,7 +377,8 @@ export async function planTonight(
 
 RIGHT NOW: ${date.toLocaleDateString('en-IN', { weekday: 'long' })} ${partOfDay(date)}, ${date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}.
 Time available: ${input.minutes === 'binge' ? 'wants a series to binge' : formatRuntime(input.minutes)}. Feeling: ${input.moodNow ?? 'not said'}. Wants to: ${input.want ?? 'not said'}. Watching with: ${input.audience}. Wants: ${input.discovery === 'new' ? 'something new' : input.discovery === 'rewatch' ? 'a rewatch' : 'a surprise'}.${anyLanguage ? ' Happy to watch in any language with subtitles.' : ''}${input.freeText ? `\nThey said: "${input.freeText}"` : ''}${news}`;
-      const lines = finalists.map((c, i) => ({
+      const aiPool = finalists.slice(0, AI_POOL);
+      const lines = aiPool.map((c, i) => ({
         n: i + 1,
         line: [
           `${c.snap.title}${c.snap.year ? ` (${c.snap.year})` : ''}`,
@@ -361,12 +388,15 @@ Time available: ${input.minutes === 'binge' ? 'wants a series to binge' : format
           c.snap.genreIds.slice(0, 3).map(genreName).join('/'),
           c.availability.map((a) => a.service.name).join('/') || 'not streaming',
           [c.sources.has('watchlist') && 'on watchlist', c.because && `like ${c.because}`, c.mango && `Mangoidiots: ${c.mango}`].filter(Boolean).join(', ') || '-',
-          (c.overview ?? '').slice(0, 140),
+          (c.overview ?? '').slice(0, 100),
         ].join(' | '),
       }));
-      const ranked = await rerank(engine, context, lines, PICK_COUNT);
+      const ranked = await rerank(engine, context, lines, PICKS_SHOWN);
       if (ranked.length) {
-        const picks = ranked.map((r, i) => toPick(finalists[r.n - 1], r.why, i === ranked.length - 1 && ranked.length >= 4));
+        const picks = ranked.map((r, i) => toPick(aiPool[r.n - 1], r.why, i === ranked.length - 1 && ranked.length >= 4));
+        // Everything else waits in reserve, best score first, with a plain reason (no extra AI work).
+        const chosen = new Set(ranked.map((r) => aiPool[r.n - 1]));
+        for (const c of finalists) if (picks.length < total && !chosen.has(c)) picks.push(toPick(c, basicWhy(c, input)));
         return { picks, engineUsed: 'ai', aiError, considered: pool.size, effective };
       }
       aiError = 'The AI returned no usable picks.';
@@ -375,7 +405,7 @@ Time available: ${input.minutes === 'binge' ? 'wants a series to binge' : format
     }
   }
 
-  const picks = finalists.slice(0, PICK_COUNT).map((c) => toPick(c, basicWhy(c, input)));
+  const picks = finalists.slice(0, total).map((c) => toPick(c, basicWhy(c, input)));
   return { picks, engineUsed: 'basic', aiError, considered: pool.size, effective };
 }
 

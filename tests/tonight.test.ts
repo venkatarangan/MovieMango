@@ -75,7 +75,41 @@ describe('planTonight (mocked TMDB)', () => {
     };
     const r = await planTonight({ ...input, want: undefined }, both, [watched], engine);
     expect(r.engineUsed).toBe('ai');
-    expect(r.picks.map((p) => [p.snap.title, p.why])).toEqual([['A Comedy', 'A laugh tonight.']]);
+    // The model's pick comes first with its reason; the rest wait in reserve with a plain reason.
+    expect(r.picks.map((p) => p.snap.title)).toEqual(['A Comedy', 'Fits Perfectly']);
+    expect(r.picks[0].why).toBe('A laugh tonight.');
+    expect(r.picks[1].why).toMatch(/fits your time/);
+  });
+
+  it('keeps up to 20 picks, the AI explaining the first 10 and the rest waiting in reserve', async () => {
+    const many = Array.from({ length: 30 }, (_, i) => 200 + i);
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      const u = new URL(url);
+      const id = Number(u.pathname.match(/\/3\/movie\/(\d+)$/)?.[1]);
+      if (u.pathname.startsWith('/3/discover/movie')) {
+        const json = { page: 1, total_pages: 1, total_results: 30, results: many.map((n) => ({ ...listItem(101), id: n, title: `Film ${n}` })) };
+        return new Response(JSON.stringify(json), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      if (many.includes(id)) {
+        const base = JSON.parse(await fakeFetch(`https://api.themoviedb.org/3/movie/101`).text());
+        return new Response(JSON.stringify({ ...base, id, title: `Film ${id}` }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
+      return fakeFetch(url);
+    }));
+    const engine: AiEngine = {
+      id: 'gemini',
+      label: 'fake',
+      generateJson: vi.fn(async (_s: string, user: string) => {
+        const lines = user.split('\n').filter((l) => /^\d+ \|/.test(l));
+        expect(lines.length).toBeLessThanOrEqual(20);
+        return JSON.stringify({ picks: lines.slice(0, 10).reverse().map((l) => ({ n: Number(l.split(' |')[0]), why: 'Pick' })) });
+      }),
+    };
+    const r = await planTonight(input, { ...settings, useMangoidiots: false }, [], engine);
+    expect(r.picks.length).toBe(20);
+    expect(r.picks.slice(0, 10).every((p) => p.why === 'Pick')).toBe(true);
+    expect(r.picks.slice(10).every((p) => p.why !== 'Pick')).toBe(true);
+    expect(new Set(r.picks.map((p) => p.snap.tmdbId)).size).toBe(20);
   });
 
   it('never asks TMDB about custom titles, and never picks them', async () => {
