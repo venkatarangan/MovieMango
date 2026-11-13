@@ -2,11 +2,11 @@ import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import CasinoRoundedIcon from '@mui/icons-material/CasinoRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import { Autocomplete, Box, Button, Card, CardContent, Chip, CircularProgress, InputAdornment, Skeleton, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, Card, CardContent, CircularProgress, InputAdornment, Skeleton, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router';
-import { img, mediaTypeOf, searchMulti, snapshotFromList, type TmdbListItem } from '../api/tmdb';
+import { mediaTypeOf, searchMulti, snapshotFromList, type TmdbListItem } from '../api/tmdb';
 import { ErrorNote, SectionTitle } from '../components/common';
 import PosterCard, { Poster, PosterRow } from '../components/PosterCard';
 import { QuickActions } from '../components/TitleActions';
@@ -17,6 +17,7 @@ import { trackEvent } from '../lib/analytics';
 import { episodeLabel } from '../lib/episodes';
 import { formatRuntime } from '../lib/format';
 import { languageName } from '../lib/languages';
+import { serviceByKey } from '../lib/providers';
 import { fillSlots } from '../lib/slots';
 import type { MediaType, TitleSnapshot, UserItem } from '../lib/types';
 import { languageShelf, randomShelf, streamingNow, worldShelf } from '../reco/home';
@@ -298,14 +299,8 @@ function StreamingShelf({ settings, items }: { settings: Settings; items: UserIt
   const list = streaming.data ?? [];
   return (
     <Shelf title="From your watchlist, on your services" to="/library?tab=watchlist" empty={!list.length}>
-      {list.map(({ item, availability, isNew }) => (
-        <Box key={item.key} sx={{ position: 'relative' }}>
-          <PosterCard snap={item} subtitle={availability.map((a) => a.service.name).join(' · ')} />
-          <Box sx={{ position: 'absolute', top: 6, left: 6, display: 'flex', gap: 0.5, alignItems: 'center', pointerEvents: 'none' }}>
-            {isNew && <Chip size="small" color="secondary" label="New" sx={{ height: 22, fontWeight: 700 }} />}
-            {availability[0]?.logoPath && <Box component="img" src={img(availability[0].logoPath, 'w92')} alt="" sx={{ width: 24, height: 24, borderRadius: '6px', boxShadow: 2 }} />}
-          </Box>
-        </Box>
+      {list.map(({ item, services }) => (
+        <PosterCard key={item.key} snap={item} subtitle={services.map((s) => serviceByKey(s.key)?.name ?? s.key).join(' · ')} />
       ))}
     </Shelf>
   );

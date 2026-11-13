@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -1069,3 +1069,26 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 > the Books by the author section in about is not like the other headings, make them the same.
 
 - The heading uses the same style as Credits and the other About headings (h5). 0.3.4.
+
+
+---
+
+## 34. Twenty-fifth-round prompts (verbatim) and response
+
+> in the #/library page listing, give me a way to select a particular streaming service and see the items in the list that are in that streaming list of my choice, also to see only the items that are not in streaming services. give me the plan on the UX you are planning to do for this
+
+> 1. dropdown is fine, 2. yes include on my services, 3. yes show other services as well. 4. remember to cache as much as possible and in my watchlist try to store the services they streamed the first time we checked, give a button next to it, to refresh the saved info only for saved info. give me the overall ux plan for my approval
+
+> 1. add streaming filters to browse. 2. sync streaming info to google drive. 3. already the homepage posters have streaming services logo on top of them, the same can be used for browse and watchlist pages apart from the new feature we are asking for - what do you say - can you sync up and ensure one set of feature is common to ensure save, cache works correctly and not repeated. give me the plan and your questions for approval
+
+> 1. which will be your recommendation without overwhelm TMDB calls and get us throttled as well as user friendly. 2. do you see a downside to always on. 3. yes. 4. okay. 5. I also want a new feature for every item in my watchlist to have two fields for user input - the first will be a URL like a Youtube URL or third-party site URl where the movie or the tv-show may be available legally apart from streaming services we know, the second field is a general text for any notes to be written, upto say 1kb in size. give me your plan.
+
+> 1. ok, go with yoru suggestions. 2. go with your suggestion. 5. go with your suggestions, i like the search the notes as well, do it. yes, allow it on any saved title. yes, add to the markdown. go ahead and implement the changes we discussed carefully, verify them, while I am away.
+
+- One shared streaming feature (`src/db/streaming.ts`, `src/lib/streaming.ts`): a `streaming` table, one queued checker (3 at a time, paced, pause on 429/5xx, never twice), poster logos everywhere (`StreamingBadge`), Home's watchlist row moved onto it.
+- Library: Streaming menu (On my services, each service, other services, Not streaming, with counts), remembered per list; ⟳ re-checks saved info and reports changes. Library titles keep their first answer; posters are checked only after 500 ms on screen.
+- Browse: Streaming menu (`on=` in the URL) filtered by TMDB itself; one service gives every poster its logo for free.
+- Streaming info for library titles syncs to Drive in the existing batch; other rows stay local and expire.
+- Your link and notes (1 KB) on any saved title: title page card, "Your link" button, poster mark, notes search, Markdown `link:`/`notes:` lines. Not in text shares.
+- Changes from the plan: logos sit bottom-left (top-left crowded the ＋/👎 buttons on phones); an imported "notes" column always becomes your notes, also for custom titles (descriptions use `>` lines), so Markdown round-trips without loss.
+- 0.4.0. Tests: 138 unit, 22 e2e (phone and desktop) pass. Not committed or pushed yet.

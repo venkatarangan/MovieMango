@@ -1,4 +1,4 @@
-import { cached, DAY, FAILURE_COOLDOWN_MS, getJson, HOUR, HttpError, isOffline, isTransientError, type CacheOptions } from './http';
+import { cached, DAY, refreshCached, FAILURE_COOLDOWN_MS, getJson, HOUR, HttpError, isOffline, isTransientError, type CacheOptions } from './http';
 import { coreFreshMs, PROVIDERS_FRESH_MS, readRecent, saveRecent, touchRecent } from './recent';
 import { onCacheReset } from '../db';
 import { getSettings } from '../db/settings';
@@ -258,10 +258,18 @@ export async function peekDetails(type: MediaType, id: number): Promise<TmdbDeta
 }
 
 /** Watch providers for every region (index by `'IN'`). Uses the recent store when fresh, else one small request. */
-export async function getWatchProviders(type: MediaType, id: number): Promise<ProvidersByRegion> {
+export async function getWatchProviders(type: MediaType, id: number, opts: { fresh?: boolean } = {}): Promise<ProvidersByRegion> {
   const key = `${type}:${id}`;
   const row = await readRecent(key);
   const stored = (row?.data as TmdbDetails | undefined)?.['watch/providers']?.results;
+  // "Check again": skip every cached copy, but still store what comes back.
+  if (opts.fresh) {
+    if (row && stored) return fetchProviders(type, id);
+    const path = `/${type}/${id}/watch/providers`;
+    const token = await tokenOrThrow();
+    const res = await refreshCached(tmdbCacheKey(path, {}), PROVIDERS_FRESH_MS, () => rawGet<{ results?: ProvidersByRegion }>(path, {}, token));
+    return res.results ?? {};
+  }
   if (!row || !stored) {
     const res = await tmdbGet<{ results?: ProvidersByRegion }>(`/${type}/${id}/watch/providers`, {}, PROVIDERS_FRESH_MS);
     return res.results ?? {};

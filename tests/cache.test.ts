@@ -240,7 +240,7 @@ describe('recent titles store', () => {
 });
 
 describe('schema upgrade', () => {
-  it('v1 databases open as v2 with their data intact', async () => {
+  it('v1 databases open as the latest version with their data intact', async () => {
     db.close();
     await Dexie.delete('moviemango');
     const v1 = new Dexie('moviemango');
@@ -249,9 +249,10 @@ describe('schema upgrade', () => {
     await v1.table('cache').put({ key: 'c', value: 1, expires: Date.now() + DAY });
     v1.close();
     await db.open();
-    expect(db.verno).toBe(2);
+    expect(db.verno).toBe(3);
     expect((await db.items.get('movie:1'))?.title).toBe('Kept');
     expect(await db.cache.count()).toBe(1);
     expect(await db.titles.count()).toBe(0);
+    expect(await db.streaming.count()).toBe(0);
   });
 });

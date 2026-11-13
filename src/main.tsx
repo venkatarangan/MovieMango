@@ -7,6 +7,7 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import { pruneCache } from './db';
+import { migrateStreamSeen, pruneStreaming } from './db/streaming';
 import { startSync } from './sync/sync';
 
 // Search links such as https://watch.mangoidiots.com/?q=dune (or localhost:5173/?q=dune) open the Search page.
@@ -15,6 +16,9 @@ if (q !== null) history.replaceState(null, '', `${location.pathname}#/search?q=$
 
 registerSW({ immediate: true });
 void pruneCache();
+void migrateStreamSeen()
+  .then(() => pruneStreaming())
+  .catch(() => undefined);
 void startSync();
 
 createRoot(document.getElementById('root')!).render(

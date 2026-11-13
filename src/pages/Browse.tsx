@@ -1,7 +1,7 @@
 import ArrowBackRoundedIcon from '@mui/icons-material/ArrowBackRounded';
 import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import { Alert, Box, Button, Chip, FormControlLabel, InputAdornment, MenuItem, Skeleton, Switch, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, FormControlLabel, InputAdornment, ListSubheader, MenuItem, Skeleton, Switch, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router';
@@ -12,7 +12,8 @@ import { useSettings, type Settings } from '../db/settings';
 import { MOVIE_GENRES, TV_GENRES } from '../lib/genres';
 import { parseFilterText, parseYear } from '../lib/browse';
 import { languageName, LANGUAGES, WORLD_LANGUAGES } from '../lib/languages';
-import { resolveProviderIds } from '../lib/providers';
+import { resolveProviderIds, SERVICES, serviceByKey } from '../lib/providers';
+import type { FoundService } from '../lib/streaming';
 import type { MediaType, TitleSnapshot } from '../lib/types';
 
 /** Titles per "page" here: five TMDB pages of 20. */
@@ -29,6 +30,8 @@ const SORTS: { key: Sort; label: string }[] = [
 /** The nearest genre on the other side when switching between films and shows. */
 const OTHER_TYPE_GENRE: Record<number, number> = { 28: 10759, 12: 10759, 878: 10765, 14: 10765, 10752: 10768, 10759: 28, 10765: 878, 10768: 10752, 10762: 10751 };
 
+const validOn = (v?: string | null) => (v && (v === 'mine' || serviceByKey(v)) ? v : undefined);
+
 const genresFor = (type: MediaType) => (type === 'movie' ? MOVIE_GENRES : TV_GENRES);
 
 interface Filters {
@@ -38,21 +41,27 @@ interface Filters {
   year?: string;
   lang?: string;
   theme?: string;
-  mine: boolean;
+  /** Streaming filter: 'mine' (any of my services) or one service key. */
+  on?: string;
   myLangs: boolean;
   set: number;
 }
 
-async function loadSet(f: Filters, settings: Settings, keywordIds: number[]): Promise<{ titles: TitleSnapshot[]; total: number; pages: number }> {
+async function loadSet(f: Filters, settings: Settings, keywordIds: number[]): Promise<{ titles: TitleSnapshot[]; total: number; pages: number; hint?: FoundService }> {
   const today = new Date().toISOString().slice(0, 10);
   const movie = f.type === 'movie';
   const dateKey = movie ? 'primary_release_date' : 'first_air_date';
   const range = f.year ? parseYear(f.year) : undefined;
   let providers: string | undefined;
-  if (f.mine) {
+  let hint: FoundService | undefined;
+  if (f.on) {
+    // TMDB filters by service itself, so this costs no per-title checks.
     const catalogue = await getWatchProviderCatalogue(f.type, settings.region).catch(() => ({ results: [] }));
     const ids = resolveProviderIds(catalogue.results);
-    providers = [...new Set(settings.services.flatMap((k) => ids[k] ?? []))].join('|');
+    const keys = f.on === 'mine' ? settings.services : [f.on];
+    providers = [...new Set(keys.flatMap((k) => ids[k] ?? []))].join('|');
+    // One service: every poster gets its logo without asking.
+    if (keys.length === 1) hint = { key: keys[0], logo: catalogue.results.find((p) => ids[keys[0]]?.includes(p.provider_id) && p.logo_path)?.logo_path };
   }
   const params: Record<string, string | number | undefined> = {
     with_genres: f.genre,
@@ -77,7 +86,7 @@ async function loadSet(f: Filters, settings: Settings, keywordIds: number[]): Pr
     .flatMap((p) => p.results)
     .filter((r) => !seen.has(r.id) && seen.add(r.id))
     .map((r) => snapshotFromList(r, f.type));
-  return { titles, total: pages[0]?.total_results ?? 0, pages: Math.min(pages[0]?.total_pages ?? 0, TMDB_MAX_PAGE) };
+  return { titles, total: pages[0]?.total_results ?? 0, pages: Math.min(pages[0]?.total_pages ?? 0, TMDB_MAX_PAGE), hint };
 }
 
 export default function Browse() {
@@ -95,7 +104,7 @@ export default function Browse() {
     year: params.get('year') ?? undefined,
     lang: params.get('lang') ?? undefined,
     theme: params.get('theme') ?? undefined,
-    mine: params.get('mine') === '1',
+    on: validOn(params.get('on') ?? (params.get('mine') === '1' ? 'mine' : undefined)),
     myLangs: params.get('mylangs') === '1',
     set: Math.max(0, Number(params.get('p')) || 0),
   };
@@ -227,7 +236,22 @@ export default function Browse() {
             </MenuItem>
           ))}
         </TextField>
-        <FormControlLabel control={<Switch checked={f.mine} onChange={(e) => update({ mine: e.target.checked ? '1' : undefined })} />} label="On my services" />
+        <TextField select size="small" label="Streaming" value={f.on ?? ''} onChange={(e) => update({ on: e.target.value || undefined, mine: undefined })} sx={{ minWidth: 170 }} slotProps={{ inputLabel: { shrink: true }, select: { displayEmpty: true } }}>
+          <MenuItem value="">Any</MenuItem>
+          <MenuItem value="mine">On my services</MenuItem>
+          {settings.services.length > 0 && <ListSubheader>Your services</ListSubheader>}
+          {settings.services.map((k) => (
+            <MenuItem key={k} value={k}>
+              {serviceByKey(k)?.name ?? k}
+            </MenuItem>
+          ))}
+          <ListSubheader>Other services</ListSubheader>
+          {SERVICES.filter((s) => !settings.services.includes(s.key)).map((s) => (
+            <MenuItem key={s.key} value={s.key}>
+              {s.name}
+            </MenuItem>
+          ))}
+        </TextField>
         {!f.lang && <FormControlLabel control={<Switch checked={f.myLangs} onChange={(e) => update({ mylangs: e.target.checked ? '1' : undefined })} />} label="My languages" />}
       </Box>
 
@@ -256,7 +280,7 @@ export default function Browse() {
             <Box data-loading={results.isPlaceholderData || undefined} sx={{ opacity: results.isPlaceholderData ? 0.5 : 1, transition: 'opacity .2s' }}>
               <PosterGrid>
                 {data.titles.map((s) => (
-                  <PosterCard key={s.tmdbId} snap={s} subtitle={[s.year, languageName(s.originalLanguage)].filter(Boolean).join(' · ')} />
+                  <PosterCard key={s.tmdbId} snap={s} subtitle={[s.year, languageName(s.originalLanguage)].filter(Boolean).join(' · ')} streaming="check" streamHint={data.hint} />
                 ))}
               </PosterGrid>
             </Box>

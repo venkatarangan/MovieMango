@@ -11,6 +11,10 @@ export type BuiltinList = (typeof BUILTIN_LISTS)[number];
 
 export const MAX_CUSTOM_LISTS = 50;
 
+/** Notes are capped at 1 KB (UTF-8 bytes, so about 340 Tamil letters or 1,000 English ones). */
+export const MAX_NOTES_BYTES = 1024;
+export const MAX_LINK_LENGTH = 2000;
+
 /** The small slice of a TMDB title we keep for anything the user saves, so lists render offline. */
 export interface TitleSnapshot {
   tmdbId: number;
@@ -51,6 +55,10 @@ export interface UserItem extends TitleSnapshot {
   episodesSeen?: Record<string, number[]>;
   /** TV only: the next unwatched episode, worked out when progress changes; null when caught up. */
   nextEpisode?: { season: number; episode: number; name?: string } | null;
+  /** The user's own legal place to watch it (http/https), besides the known services. */
+  watchLink?: string;
+  /** The user's own notes, up to MAX_NOTES_BYTES (UTF-8). */
+  notes?: string;
   addedAt: number;
   updatedAt: number;
 }
@@ -65,3 +73,6 @@ export interface CustomList {
 }
 
 export const itemKey = (type: MediaType, id: number) => `${type}:${id}`;
+
+/** In the library: on a list or rated. An item with no lists and no rating is a removed title kept for sync. */
+export const isSaved = (i: Pick<UserItem, 'lists' | 'rating'> | undefined) => !!i && (i.lists.length > 0 || !!i.rating);

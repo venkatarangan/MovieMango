@@ -23,6 +23,35 @@ describe('Markdown parser', () => {
     expect(rows[2].tmdbId).toBe(550776);
     expect(rows[3].imdbId).toBe('tt0111161');
     expect(rows[7]).toMatchObject({ custom: true, year: 2018, url: 'https://example.com/wedding', overview: 'Optional description for your own title.' });
+    expect(rows[0].notes).toBe('Amma recommended it');
+  });
+
+  it('reads your own watch link and notes, inline or on indented lines', () => {
+    const rows = parseMarkdown(
+      [
+        '# Watchlist',
+        '- Kaithi (2019) · movie · link: https://www.youtube.com/watch?v=abc · notes: Watch with Appa',
+        '- Jai Bhim (2021) · movie',
+        '  link: youtube.com/watch?v=xyz',
+        '  notes: First line',
+        '  notes: Second · with a dot | and a bar',
+        '- Super Deluxe · link: https://www.themoviedb.org/movie/550776',
+        '- Bad link · link: javascript:alert(1)',
+      ].join('\n'),
+    ).rows;
+    expect(rows[0]).toMatchObject({ title: 'Kaithi', year: 2019, watchLink: 'https://www.youtube.com/watch?v=abc', notes: 'Watch with Appa' });
+    expect(rows[0].url).toBeUndefined();
+    expect(rows[1]).toMatchObject({ title: 'Jai Bhim', watchLink: 'https://youtube.com/watch?v=xyz', notes: 'First line\nSecond · with a dot | and a bar' });
+    // A TMDB link identifies the title instead.
+    expect(rows[2]).toMatchObject({ title: 'Super Deluxe', tmdbId: 550776, type: 'movie' });
+    expect(rows[2].watchLink).toBeUndefined();
+    expect(rows[3].watchLink).toBeUndefined();
+  });
+
+  it('caps imported notes at 1 KB', () => {
+    const r = parseLine(`Kaithi · notes: ${'அ'.repeat(500)}`);
+    expect(new TextEncoder().encode(r!.notes!).length).toBeLessThanOrEqual(1024);
+    expect(r!.notes!.length).toBe(341);
   });
 
   it('maps headings to built-in lists, loosely', () => {
@@ -62,7 +91,7 @@ describe('Markdown parser', () => {
 
   it('reads key: value details and ratings in other scales', () => {
     const r = parseLine('Kaathal (2023) · type: movie · rating: 8/10 · lang: Malayalam · runtime: 1h 54m · genres: Drama, Family · director: Jeo Baby · cast: Mammootty, Jyothika · notes: quiet and brave');
-    expect(r).toMatchObject({ title: 'Kaathal', year: 2023, type: 'movie', rating: 'like', originalLanguage: 'ml', runtime: 114, genreIds: [18, 10751], director: 'Jeo Baby', cast: ['Mammootty', 'Jyothika'], overview: 'quiet and brave' });
+    expect(r).toMatchObject({ title: 'Kaathal', year: 2023, type: 'movie', rating: 'like', originalLanguage: 'ml', runtime: 114, genreIds: [18, 10751], director: 'Jeo Baby', cast: ['Mammootty', 'Jyothika'], notes: 'quiet and brave' });
     expect(ratingFrom('★★★★½')).toBe('love');
     expect(ratingFrom('3')).toBeUndefined(); // middling: watched, no verdict
     expect(ratingFrom('4/5')).toBe('like');
@@ -167,6 +196,13 @@ describe('Markdown export', () => {
     expect(itemToMarkdown(items[2])).toBe(
       '- Amma’s Home Video (1998) · movie · rating: like · custom · original: அம்மா வீடியோ · lang: ta · runtime: 42 · genres: Family, Documentary · director: Appa · cast: Amma, Paati · url: https://example.com/v\n  > Our first VHS.\n  > Shot in Madurai.',
     );
+  });
+
+  it('writes your link and notes as indented lines', () => {
+    const noted = { ...items[0], watchLink: 'https://www.youtube.com/watch?v=abc', notes: 'Line one\n\nLine · two' };
+    expect(itemToMarkdown(noted)).toBe('- Super Deluxe (2019) · movie · rating: love · tmdb: 550776\n  link: https://www.youtube.com/watch?v=abc\n  notes: Line one\n  notes: Line · two');
+    const back = parseMarkdown(listsToMarkdown([{ name: 'Watched', items: [noted] }])).rows[0];
+    expect(back).toMatchObject({ tmdbId: 550776, watchLink: noted.watchLink, notes: 'Line one\nLine · two' });
   });
 
   it('round-trips through the parser', () => {

@@ -1,7 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from './index';
 import { computeNextEpisode, withEpisode, withSeason, withSeenUpTo, type EpisodesSeen, type SeasonInfo } from '../lib/episodes';
-import { itemKey, MAX_CUSTOM_LISTS, type CustomList, type MyRating, type TitleSnapshot, type UserItem } from '../lib/types';
+import { cleanNotes, cleanWatchLink } from '../lib/notes';
+import { isSaved, itemKey, MAX_CUSTOM_LISTS, type CustomList, type MyRating, type TitleSnapshot, type UserItem } from '../lib/types';
 
 const now = () => Date.now();
 
@@ -53,6 +54,23 @@ export async function setRating(snapshot: TitleSnapshot, rating: MyRating | unde
   });
 }
 
+/**
+ * Saves the user's own watch link and notes (cleaned and capped). A title that isn't saved yet goes on the
+ * Watchlist so they're kept; `added` says so. An empty field removes it.
+ */
+export async function setUserNotes(snapshot: TitleSnapshot, patch: { watchLink?: string; notes?: string }): Promise<{ item: UserItem; added: boolean }> {
+  let added = false;
+  const item = await upsert(snapshot, (item) => {
+    if ('watchLink' in patch) item.watchLink = cleanWatchLink(patch.watchLink);
+    if ('notes' in patch) item.notes = cleanNotes(patch.notes);
+    if (!isSaved(item) && (item.watchLink || item.notes)) {
+      item.lists = [...item.lists, 'watchlist'];
+      added = true;
+    }
+  });
+  return { item, added };
+}
+
 export async function markNotTonight(snapshot: TitleSnapshot, days = 7) {
   return upsert(snapshot, (item) => {
     item.notTonightUntil = now() + days * 24 * 3600_000;
@@ -99,12 +117,16 @@ export async function saveCustomTitle(snap: TitleSnapshot, opts: { list?: string
 
 /** "Deletes" a custom title: it leaves every list and loses its rating; the empty record stops sync bringing it back. */
 export async function removeCustomTitle(key: string) {
-  await db.items.update(key, { lists: [], rating: undefined, updatedAt: now() });
+  await db.items.update(key, { lists: [], rating: undefined, watchLink: undefined, notes: undefined, updatedAt: now() });
 }
 
-/** Adds a title to lists and sets a rating, never taking it out of a list (for imports). */
-export async function importItem(snapshot: TitleSnapshot, lists: string[], rating?: MyRating) {
+/** Adds a title to lists and sets a rating, link and notes, never taking it out of a list (for imports). */
+export async function importItem(snapshot: TitleSnapshot, lists: string[], rating?: MyRating, extra: { watchLink?: string; notes?: string } = {}) {
   return upsert(snapshot, (item) => {
+    const link = cleanWatchLink(extra.watchLink);
+    const notes = cleanNotes(extra.notes);
+    if (link) item.watchLink = link;
+    if (notes) item.notes = notes;
     for (const l of lists) if (!item.lists.includes(l)) item.lists = [...item.lists, l];
     if (rating) item.rating = rating;
     if ((rating === 'like' || rating === 'love') && !item.lists.includes('watched')) item.lists = [...item.lists, 'watched'];

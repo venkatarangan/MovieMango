@@ -47,6 +47,19 @@ const season = (id: number, n: number) => ({
   })),
 });
 
+const PROVIDERS = [
+  { provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.jpg' },
+  { provider_id: 119, provider_name: 'Amazon Prime Video', logo_path: '/prime.jpg' },
+  { provider_id: 2336, provider_name: 'JioHotstar', logo_path: '/hotstar.jpg' },
+];
+/** Where a title streams in India: one service by id, plus a free-with-ads one for odd ids. 901 streams nowhere; 902 is on ZEE5 only. */
+export function watchProviders(id: number) {
+  const link = 'https://www.themoviedb.org/movie/1/watch';
+  if (id === 901) return { link };
+  if (id === 902) return { link, flatrate: [{ provider_id: 232, provider_name: 'Zee5', logo_path: '/zee5.jpg' }] };
+  return { link, flatrate: [PROVIDERS[id % 3]], ads: id % 2 ? [PROVIDERS[(id + 1) % 3]] : [] };
+}
+
 const page = (ids: number[]) =>({ page: 1, total_pages: 1, total_results: ids.length, results: ids.map(title) });
 
 function tmdb(path: string, search: URLSearchParams) {
@@ -99,17 +112,14 @@ function tmdb(path: string, search: URLSearchParams) {
   if (path.startsWith('/search') && search.get('query')?.includes('zzz')) return page([]);
   if (path.startsWith('/trending') || path.startsWith('/search')) return { ...page([101, 102, 103, 104, 105, 106, 107, 108]), results: page([101, 102, 103, 104, 105, 106, 107, 108]).results.map((r) => ({ ...r, media_type: 'movie' })) };
   if (path.endsWith('/recommendations')) return page([150, 151, 152, 153]);
+  const wp = path.match(/^\/(movie|tv)\/(\d+)\/watch\/providers$/);
+  if (wp) return { id: Number(wp[2]), results: { IN: watchProviders(Number(wp[2])) } };
   const sm = path.match(/^\/tv\/(\d+)\/season\/(\d+)$/);
   if (sm) return season(Number(sm[1]), Number(sm[2]));
   const m = path.match(/^\/(movie|tv)\/(\d+)$/);
   if (m) {
     const id = Number(m[2]);
     const t = title(id);
-    const providers = [
-      { provider_id: 8, provider_name: 'Netflix', logo_path: '/netflix.jpg' },
-      { provider_id: 119, provider_name: 'Amazon Prime Video', logo_path: '/prime.jpg' },
-      { provider_id: 2336, provider_name: 'JioHotstar', logo_path: '/hotstar.jpg' },
-    ];
     return {
       ...t,
       name: m[1] === 'tv' ? t.title : undefined,
@@ -122,7 +132,7 @@ function tmdb(path: string, search: URLSearchParams) {
       tagline: 'Every choice has a sequel.',
       credits: { cast: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, name: ['Nayanthara', 'Fahadh Faasil', 'Tabu', 'Vijay Sethupathi', 'Sai Pallavi', 'Irrfan Khan', 'Revathi', 'Nawazuddin S.'][i], character: 'Role', profile_path: null })), crew: [{ id: 99, name: 'Vetrimaaran', job: 'Director' }] },
       videos: { results: [{ key: 'abc', site: 'YouTube', type: 'Trailer', official: true, name: 'Trailer' }] },
-      'watch/providers': { results: { IN: { link: 'https://www.themoviedb.org/movie/1/watch', flatrate: [providers[id % 3]], ads: id % 2 ? [providers[(id + 1) % 3]] : [] } } },
+      'watch/providers': { results: { IN: watchProviders(id) } },
       release_dates: { results: [{ iso_3166_1: 'IN', release_dates: [{ certification: id % 4 ? 'UA' : 'U' }] }] },
       keywords: { keywords: [] },
       external_ids: { wikidata_id: 'Q1' },

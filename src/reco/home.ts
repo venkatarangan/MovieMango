@@ -1,10 +1,11 @@
-import { discover, getDetails, getWatchProviderCatalogue, snapshotFromList } from '../api/tmdb';
-import { db } from '../db';
+import { discover, getWatchProviderCatalogue, snapshotFromList } from '../api/tmdb';
+import { checkStreaming } from '../db/streaming';
 import type { Settings } from '../db/settings';
 import { MOVIE_GENRES, TV_GENRES } from '../lib/genres';
 import { otherLanguages } from '../lib/languages';
-import { availabilityFrom, resolveProviderIds, type Availability } from '../lib/providers';
-import type { MediaType, TitleSnapshot, UserItem } from '../lib/types';
+import { resolveProviderIds } from '../lib/providers';
+import { isNewRow, STREAMING_FRESH_MS, type StreamingService } from '../lib/streaming';
+import { isCustom, type MediaType, type TitleSnapshot, type UserItem } from '../lib/types';
 import { buildProfile, topGenres } from './profile';
 
 /** Small seeded PRNG so a shuffle stays stable for one Home visit. */
@@ -115,62 +116,29 @@ export async function languageShelf(settings: Settings, date = new Date()): Prom
 
 export interface StreamingNow {
   item: UserItem;
-  availability: Availability[];
-  /** A service that wasn't showing this title the last time we checked. */
+  /** The user's services carrying it. */
+  services: StreamingService[];
+  /** One of those services arrived after the first check, this past week. */
   isNew: boolean;
 }
 
-const SEEN_KEY = 'streamSeen';
 const STREAM_CHECK_LIMIT = 24;
-const NEW_FOR_MS = 7 * 24 * 3600_000;
-
-interface Seen {
-  keys: string[];
-  /** When a service last appeared that hadn't carried the title before. */
-  newAt?: number;
-}
-
-async function pLimit<T, R>(list: T[], limit: number, fn: (t: T) => Promise<R>): Promise<(R | undefined)[]> {
-  const out: (R | undefined)[] = new Array(list.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(limit, list.length) }, async () => {
-      while (next < list.length) {
-        const i = next++;
-        out[i] = await fn(list[i]).catch(() => undefined);
-      }
-    }),
-  );
-  return out;
-}
 
 /**
- * Watchlist titles streaming on the user's services, newest arrivals first. Remembers which
- * services carried each title (on this device only), so one that arrives later shows as "New" for a week.
+ * Watchlist titles streaming on the user's services, newest arrivals first. Uses the shared streaming
+ * store (src/db/streaming.ts): each title is re-checked when its info is over 2 days old, which is how a
+ * service that arrives later gets noticed and shown as "New" for a week.
  */
 export async function streamingNow(items: UserItem[], settings: Settings, now = Date.now()): Promise<StreamingNow[]> {
   const watchlist = items
-    .filter((i) => i.tmdbId > 0 && i.lists.includes('watchlist') && !i.lists.includes('watched'))
+    .filter((i) => !isCustom(i) && i.lists.includes('watchlist') && !i.lists.includes('watched'))
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, STREAM_CHECK_LIMIT);
-  const mine = new Set(settings.services);
-  const seen = ((await db.kv.get(SEEN_KEY))?.value as Record<string, Seen> | undefined) ?? {};
-  const checked = await pLimit(watchlist, 3, async (item) => {
-    const d = await getDetails(item.type, item.tmdbId);
-    return { item, availability: availabilityFrom(d['watch/providers']?.results?.[settings.region]).filter((a) => mine.has(a.service.key)) };
-  });
+  const rows = await Promise.all(watchlist.map((i) => checkStreaming(i, { maxAgeMs: STREAMING_FRESH_MS }).catch(() => undefined)));
   const out: StreamingNow[] = [];
-  // Only titles still on the watchlist are remembered; a failed check keeps what we knew.
-  const nextSeen: Record<string, Seen> = Object.fromEntries(watchlist.filter((i) => seen[i.key]).map((i) => [i.key, seen[i.key]]));
-  for (const c of checked) {
-    if (!c) continue;
-    const keys = c.availability.map((a) => a.service.key);
-    const before = seen[c.item.key];
-    const arrived = !!before && keys.some((k) => !before.keys.includes(k));
-    const newAt = arrived ? now : before?.newAt;
-    nextSeen[c.item.key] = { keys, newAt };
-    if (keys.length) out.push({ ...c, isNew: !!newAt && now - newAt < NEW_FOR_MS });
-  }
-  await db.kv.put({ key: SEEN_KEY, value: nextSeen }).catch(() => undefined);
+  watchlist.forEach((item, i) => {
+    const services = rows[i]?.services.filter((s) => settings.services.includes(s.key)) ?? [];
+    if (services.length) out.push({ item, services, isNew: isNewRow(rows[i], settings.services, now) });
+  });
   return out.sort((a, b) => Number(b.isNew) - Number(a.isNew));
 }

@@ -46,6 +46,7 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 - GA4 ID not supplied yet (Actions variable `GA_ID`).
 - Built 2026-10-07 (v0.3.0): 👎 👍 ❤️ ratings, poster ＋/👎 with Undo, Library Loved/Not for me tabs, list sort/filter/find, genre browse pages, person pages, World picks, language of the week, Tonight "Any language", row arrows, batched Drive sync.
 - Built 2026-10-03: Home page, TV episode tracking, custom titles, Markdown import/export, Drive sync options, search links, TMDB caching. "Now on your services" is an in-app Home row only (no notifications).
+- Built 2026-11-12 (v0.4.0): shared streaming info (`src/db/streaming.ts`: one checker, one store synced for library titles, poster logos), Library and Browse Streaming menus with ⟳ refresh, your watch link and notes on saved titles.
 - Not built: image share cards, Tamil/Hindi UI, YouTube sync, more regions.
 
 ## Backlog (build only when the owner asks)

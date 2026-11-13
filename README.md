@@ -16,13 +16,13 @@ I love movies, and not just Indian and Hollywood ones; some of my favourites com
 
 - **Home**: search first, then three "Feeling lucky?" picks, what to continue watching, watchlist titles now on your services, movies and shows for you, 🌏 World picks, a language of the week, and your latest watchlist and watched titles.
 - **Tonight**: choose your time, mood and company and get a few picks, each with a reason. Or just type what you want. Open it up to any language if you're happy with subtitles.
-- **Where to watch**: subscription and free options on India's top 10 services.
-- **Lists**: mark titles Watchlist or Watched, and rate them 👎 Not for me, 👍 Liked it or ❤️ Loved it. Every poster has quick ＋ and 👎 buttons, with Undo. Keep up to 50 lists of your own. Sort, filter and search any list.
+- **Where to watch**: subscription and free options on India's top 10 services. Posters show small logos of where a title streams, and Library and Discover have a Streaming menu (on my services, a single service, other services, not streaming). Checks are gentle and slow on purpose, and saved so they're free next time.
+- **Lists**: mark titles Watchlist or Watched, and rate them 👎 Not for me, 👍 Liked it or ❤️ Loved it. Every poster has quick ＋ and 👎 buttons, with Undo. Keep up to 50 lists of your own. Sort, filter and search any list. Add your own watch link and notes to any saved title.
 - **Discover**: tap a genre for its newest 100 titles (filter by theme, year, language or your services), or tap a name to see everything that actor or director made.
 - **Mangoidiots reviews**: read the review and rating inside the app.
 - **TV progress**: tick episodes or whole seasons and see what's next.
 - **Your own titles**: add films and shows that aren't on TMDB, like old TV serials or home videos.
-- **Share and import**: send a title or a list as text, export lists as Markdown, and import lists from Markdown, IMDb or Letterboxd (with an AI prompt for other apps).
+- **Share and import**: send a title or a list as text, export lists as Markdown (links and notes included), and import lists from Markdown, IMDb or Letterboxd (with an AI prompt for other apps).
 - **Your data, your Drive**: sign in with Google to back up and sync between devices, automatically (changes go up together every couple of minutes) or only when you tap.
 - **Search links**: `watch.mangoidiots.com/?q=dune` opens a search, and browsers can add MovieMango as a search engine.
 
@@ -36,7 +36,7 @@ I love movies, and not just Indian and Hollywood ones; some of my favourites com
 
 ## Privacy
 
-There's no MovieMango server. Your lists, ratings and keys live in your browser and, if you connect it, a hidden app folder in your own Google Drive that MovieMango alone can use. On-device AI never sends your prompts anywhere. The public site counts anonymous page views (never your titles or lists); you can turn that off in Settings. [Full privacy note](https://watch.mangoidiots.com/privacy.html).
+There's no MovieMango server. Your lists, ratings, notes, streaming info and keys live in your browser and, if you connect it, a hidden app folder in your own Google Drive that MovieMango alone can use. On-device AI never sends your prompts anywhere. The public site counts anonymous page views (never your titles or lists); you can turn that off in Settings. [Full privacy note](https://watch.mangoidiots.com/privacy.html).
 
 ## For developers
 

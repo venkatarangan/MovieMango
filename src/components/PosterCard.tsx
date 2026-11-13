@@ -1,3 +1,4 @@
+import EditNoteRoundedIcon from '@mui/icons-material/EditNoteRounded';
 import ChevronLeftRoundedIcon from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
 import { Box, Card, CardActionArea, Chip, IconButton, Typography, type SxProps, type Theme } from '@mui/material';
@@ -5,7 +6,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router';
 import { img } from '../api/tmdb';
 import { titleHue } from '../lib/custom';
+import type { FoundService } from '../lib/streaming';
 import { isCustom, type TitleSnapshot } from '../lib/types';
+import { StreamingBadge, useCheckWhenVisible } from './Streaming';
 import { QuickActions, useSavedItem } from './TitleActions';
 
 export function Poster({ path, title, width = '100%', original }: { path?: string | null; title: string; width?: number | string; original?: string }) {
@@ -37,11 +40,19 @@ export function Poster({ path, title, width = '100%', original }: { path?: strin
   );
 }
 
-/** A poster linking to the title, with ＋ and 👎 on its corner. `onClick` cards (pickers) get no corner buttons. */
-export default function PosterCard({ snap, subtitle, onClick, actions = !onClick }: { snap: TitleSnapshot; subtitle?: string; onClick?: () => void; actions?: boolean }) {
-  const disliked = useSavedItem(snap)?.rating === 'dislike';
+/**
+ * A poster linking to the title, with ＋ and 👎 on its corner. `onClick` cards (pickers) get no corner buttons.
+ * Service logos come from saved streaming info; `streaming="check"` also asks TMDB once the poster has been
+ * on screen a moment (Library, Browse). `streamHint` is a service known to carry it (Browse filter).
+ */
+export default function PosterCard({ snap, subtitle, onClick, actions = !onClick, streaming = 'show', streamHint }: { snap: TitleSnapshot; subtitle?: string; onClick?: () => void; actions?: boolean; streaming?: 'check' | 'show' | 'off'; streamHint?: FoundService }) {
+  const saved = useSavedItem(snap);
+  const disliked = saved?.rating === 'dislike';
+  const ref = useRef<HTMLDivElement>(null);
+  useCheckWhenVisible(ref, snap, streaming === 'check' && !streamHint);
+  const noted = !!(saved?.notes || saved?.watchLink);
   return (
-    <Card sx={{ bgcolor: 'transparent', overflow: 'visible', position: 'relative' }}>
+    <Card ref={ref} sx={{ bgcolor: 'transparent', overflow: 'visible', position: 'relative' }}>
       <CardActionArea
         component={onClick ? 'button' : RouterLink}
         {...(onClick ? { onClick } : { to: `/title/${snap.type}/${snap.tmdbId}` })}
@@ -49,8 +60,16 @@ export default function PosterCard({ snap, subtitle, onClick, actions = !onClick
       >
         <Box sx={{ position: 'relative', opacity: disliked ? 0.45 : 1, transition: 'opacity .2s' }}>
           <Poster path={snap.posterPath} title={snap.title} original={snap.custom?.originalTitle} />
-          {isCustom(snap) && (
-            <Chip label="Custom" size="small" sx={{ position: 'absolute', bottom: 6, right: 6, height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(0,0,0,.45)', color: '#fff' }} />
+          {streaming !== 'off' && <StreamingBadge snap={snap} hint={streamHint} />}
+          {(isCustom(snap) || noted) && (
+            <Box sx={{ position: 'absolute', bottom: 6, right: 6, display: 'flex', gap: 0.5, alignItems: 'center' }}>
+              {noted && (
+                <Box title="You added a link or notes" aria-label="Has your notes" role="img" data-testid="notes-mark" sx={{ width: 22, height: 22, borderRadius: '999px', bgcolor: 'rgba(15,18,24,.62)', color: '#fff', display: 'grid', placeItems: 'center' }}>
+                  <EditNoteRoundedIcon sx={{ fontSize: 16 }} />
+                </Box>
+              )}
+              {isCustom(snap) && <Chip label="Custom" size="small" sx={{ height: 20, fontSize: 11, fontWeight: 600, bgcolor: 'rgba(0,0,0,.45)', color: '#fff' }} />}
+            </Box>
           )}
         </Box>
         <Typography variant="body2" sx={{ fontWeight: 600, mt: 0.75, lineHeight: 1.25, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>

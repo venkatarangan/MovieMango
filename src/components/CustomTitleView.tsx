@@ -16,8 +16,10 @@ import { itemKey, type MediaType } from '../lib/types';
 import { EmptyState, SectionTitle } from './common';
 import CustomTitleDialog from './CustomTitleDialog';
 import ListActions from './ListActions';
+import MyNotes from './MyNotes';
 import { Poster } from './PosterCard';
 import ShareButton from './ShareButton';
+import { MyLinkButton } from './WhereToWatch';
 
 const hostOf = (url: string) => {
   try {
@@ -74,6 +76,7 @@ export default function CustomTitleView({ type, id }: { type: MediaType; id: num
             <ListActions snap={snap} />
           </Box>
           <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            {item.watchLink && <MyLinkButton url={item.watchLink} />}
             {c.url && (
               <Button href={c.url} target="_blank" rel="noopener noreferrer" endIcon={<OpenInNewRoundedIcon />} variant="outlined" color="inherit">
                 {hostOf(c.url)}
@@ -89,6 +92,8 @@ export default function CustomTitleView({ type, id }: { type: MediaType; id: num
           </Box>
         </Box>
       </Box>
+
+      <MyNotes snap={snap} />
 
       <SectionTitle>Story</SectionTitle>
       <Typography sx={{ maxWidth: 760, whiteSpace: 'pre-line' }}>{c.overview || 'No description yet. Tap Edit to add one.'}</Typography>

@@ -4,7 +4,8 @@ import { getSettings, onSettingsSaved, saveSettings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
 import { DriveError, downloadJson, findSyncFile, getFileMeta, uploadJson } from './drive';
 import { driveConfigured, fetchEmail, forgetToken, GoogleAuthError, requestToken, revokeToken, storedToken, type AccessToken } from './google';
-import { mergePayloads, pickSynced, sameContent, type SyncPayload } from './merge';
+import { onLibraryStreamingChanged } from '../db/streaming';
+import { libraryStreaming, mergePayloads, pickSynced, sameContent, type SyncPayload } from './merge';
 
 export type SyncStatus = 'off' | 'idle' | 'pending' | 'syncing' | 'needs-auth' | 'error';
 
@@ -54,7 +55,9 @@ const validToken = () => (token && token.expiresAt > Date.now() + 60_000 ? token
 
 async function localPayload(): Promise<SyncPayload> {
   const s = await getSettings();
-  return { app: 'MovieMango', version: 1, savedAt: Date.now(), items: await db.items.toArray(), lists: await db.lists.toArray(), settings: pickSynced(s), settingsUpdatedAt: s.settingsUpdatedAt };
+  const items = await db.items.toArray();
+  const streaming = libraryStreaming(await db.streaming.toArray(), items);
+  return { app: 'MovieMango', version: 1, savedAt: Date.now(), items, lists: await db.lists.toArray(), streaming, settings: pickSynced(s), settingsUpdatedAt: s.settingsUpdatedAt };
 }
 
 /** With key sync off, keys are neither read from nor written to Drive (and any old copy there is removed). */
@@ -67,9 +70,10 @@ function withoutKeys<T extends SyncPayload | null>(p: T): T {
 async function applyLocally(merged: SyncPayload) {
   applyingRemote = true;
   try {
-    await db.transaction('rw', db.items, db.lists, async () => {
+    await db.transaction('rw', db.items, db.lists, db.streaming, async () => {
       await db.items.bulkPut(merged.items);
       await db.lists.bulkPut(merged.lists);
+      if (merged.streaming?.length) await db.streaming.bulkPut(merged.streaming);
     });
     await saveSettings({ ...merged.settings, settingsUpdatedAt: merged.settingsUpdatedAt }, { fromSync: true });
   } finally {
@@ -216,6 +220,7 @@ export async function startSync() {
     table.hook('deleting', onChange);
   }
   onSettingsSaved((changedSynced) => changedSynced && scheduleSync());
+  onLibraryStreamingChanged(onChange);
   const whenAuto = (fn: () => void) => void getSettings().then((now) => now.driveAutoSync && now.driveConnected && fn());
   // Leaving: send what's waiting now rather than at the end of the batch window.
   const flush = () => dirty && whenAuto(() => void syncNow({ keepalive: true }));

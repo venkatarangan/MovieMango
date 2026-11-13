@@ -2,6 +2,7 @@ import { APP_URL, CREDITS } from './exportText';
 import { MOVIE_GENRES, TV_GENRES, genreName } from './genres';
 import { LANGUAGES } from './languages';
 import { safeUrl, splitNames } from './custom';
+import { cleanNotes, cleanWatchLink } from './notes';
 import { isCustom, type BuiltinList, type MediaType, type MyRating, type UserItem } from './types';
 
 /**
@@ -10,6 +11,8 @@ import { isCustom, type BuiltinList, type MediaType, type MyRating, type UserIte
  *   - Kaithi (2019) · movie · rating: like · tmdb: 550776
  *   - My Home Video (2021) · movie · custom · url: https://example.com
  *     > A description line for a custom title.
+ *     link: https://www.youtube.com/watch?v=…   (your own watch link)
+ *     notes: One line of your notes (repeat for more lines)
  * The parser is lenient: numbered lists, tables, "Title - 2019", links, IMDb ids and trailing notes all work.
  */
 
@@ -36,6 +39,9 @@ export interface MdRow {
   director?: string;
   cast?: string[];
   overview?: string;
+  /** The user's own watch link and notes. */
+  watchLink?: string;
+  notes?: string;
 }
 
 export interface MdParseResult {
@@ -74,7 +80,7 @@ export function builtinListFor(heading: string): ImportList | undefined {
 
 const listFor = (heading: string) => builtinListFor(heading) ?? heading.replace(/\s+/g, ' ').trim();
 
-type Field = 'title' | 'rating' | 'tmdb' | 'imdb' | 'type' | 'year' | 'url' | 'original' | 'language' | 'runtime' | 'genres' | 'director' | 'cast' | 'overview' | 'list' | 'custom';
+type Field = 'title' | 'rating' | 'tmdb' | 'imdb' | 'type' | 'year' | 'url' | 'original' | 'language' | 'runtime' | 'genres' | 'director' | 'cast' | 'overview' | 'list' | 'custom' | 'watchLink' | 'notes';
 
 const KEYS: Record<string, Field> = {};
 const alias = (field: Field, names: string[]) => names.forEach((n) => (KEYS[n] = field));
@@ -84,14 +90,16 @@ alias('tmdb', ['tmdb', 'tmdb id', 'tmdbid', 'tmdb_id']);
 alias('imdb', ['imdb', 'imdb id', 'imdbid', 'imdb_id', 'const']);
 alias('type', ['type', 'kind', 'media', 'media type', 'title type']);
 alias('year', ['year', 'released', 'release year', 'release date']);
-alias('url', ['url', 'link', 'web', 'website', 'letterboxd uri', 'uri']);
+alias('url', ['url', 'web', 'website', 'letterboxd uri', 'uri']);
+alias('watchLink', ['link', 'watch link', 'my link', 'my watch link']);
 alias('original', ['original', 'original title', 'original name', 'aka', 'also known as']);
 alias('language', ['lang', 'language', 'original language']);
 alias('runtime', ['runtime', 'runtime (mins)', 'mins', 'minutes', 'length', 'duration']);
 alias('genres', ['genre', 'genres']);
 alias('director', ['director', 'directors', 'directed by', 'dir', 'created by', 'creator', 'creators']);
 alias('cast', ['cast', 'starring', 'actors', 'stars in']);
-alias('overview', ['note', 'notes', 'about', 'description', 'overview', 'plot', 'summary', 'review']);
+alias('overview', ['about', 'description', 'overview', 'plot', 'summary']);
+alias('notes', ['note', 'notes', 'my notes', 'comment', 'comments', 'review']);
 alias('list', ['list']);
 alias('custom', ['custom']);
 
@@ -233,6 +241,14 @@ function applyField(row: Partial<MdRow>, field: Field, value: string) {
     case 'custom':
       row.custom = !/^(no|false|0)$/i.test(v);
       break;
+    case 'watchLink':
+      // A TMDB or IMDb link identifies the title; anything else is the user's own place to watch.
+      if (/themoviedb\.org\/(movie|tv)\/\d+|imdb\.com\/title\/tt\d/.test(v)) applyUrl(row, v);
+      else row.watchLink = cleanWatchLink(v.replace(/^<(.*)>$/, '$1')) ?? row.watchLink;
+      break;
+    case 'notes':
+      row.notes = cleanNotes(row.notes ? `${row.notes}\n${v}` : v);
+      break;
   }
 }
 
@@ -276,12 +292,18 @@ function peelTitle(row: Partial<MdRow>, title: string): string {
   return t;
 }
 
-const SPLIT = /\s+[·•|]\s+|\s+[—–]\s+|\t+|\s+-\s+(?=\(?(?:18|19|20)\d\d\b|(?:movie|film|tv|series|show|rating|tmdb|imdb|custom|url|notes?)\b)|(?<=(?:18|19|20)\d\d\)?)\s+-\s+/i;
+const LINK_FIELD = /(?:\s+[·•|—–-])?\s*\b(?:my watch link|watch link|my link|link)\s*[:=]\s*<?(https?:\/\/[^\s>]+)>?/gi;
+/** An indented "notes: …" or "link: …" line under a title. */
+const CONTINUATION = /^\s+(notes?|my notes|link|watch link|my link)\s*:\s*(.*)$/i;
+
+const SPLIT = /\s+[·•|]\s+|\s+[—–]\s+|\t+|\s+-\s+(?=\(?(?:18|19|20)\d\d\b|(?:movie|film|tv|series|show|rating|tmdb|imdb|custom|url|link|notes?)\b)|(?<=(?:18|19|20)\d\d\)?)\s+-\s+/i;
 
 /** Parses one list line (without its bullet). Returns null when there's no title. */
 export function parseLine(text: string, list = 'watchlist'): Omit<MdRow, 'line' | 'raw'> | null {
   const row: Partial<MdRow> = { list };
   let s = text.trim().replace(/^\[[ xX]\]\s+/, '');
+  // "link: https://…" is read before bare links are, so it isn't mistaken for a custom title's info page.
+  s = s.replace(LINK_FIELD, (_, url: string) => (applyField(row, 'watchLink', url), ''));
   s = s.replace(/!?\[([^\]]+)\]\((\S+?)\)/g, (_, label: string, url: string) => (applyUrl(row, url), label));
   s = s.replace(/<?(https?:\/\/[^\s>)]+)>?/g, (_, url: string) => (applyUrl(row, url), ' '));
   s = s.replace(/(\*\*|__|`)(.+?)\1/g, '$2').replace(/(^|\s)\*([^*]+)\*(?=\s|$)/g, '$1$2').replace(/\s+/g, ' ').trim();
@@ -394,6 +416,11 @@ export function parseMarkdown(text: string, max = MAX_IMPORT_ROWS, defaultList =
       if (!line) last = null;
       return;
     }
+    const cont = last && raw.match(CONTINUATION);
+    if (cont && last) {
+      applyField(last, keyOf(cont[1])!, cont[2]);
+      return;
+    }
     const quote = raw.match(/^\s*>\s?(.*)$/);
     if (quote) {
       // An indented "> text" right under a title is its description.
@@ -443,13 +470,21 @@ export function parseMarkdown(text: string, max = MAX_IMPORT_ROWS, defaultList =
 
 const oneLine = (s: string) => s.replace(/\s*\n\s*/g, ' ').replace(/\s+·\s+/g, ' - ').trim();
 
+/** The user's link and notes as indented lines under a title (one "notes:" line per line of notes). */
+function personalLines(item: UserItem): string[] {
+  const out: string[] = [];
+  if (item.watchLink) out.push(`  link: ${item.watchLink}`);
+  for (const l of item.notes?.split('\n') ?? []) if (l.trim()) out.push(`  notes: ${l.trim()}`);
+  return out;
+}
+
 /** One Markdown bullet for a saved title; custom titles carry their details so an import restores them. */
 export function itemToMarkdown(item: UserItem): string {
   const parts = [`- ${oneLine(item.title)}${item.year ? ` (${item.year})` : ''}`, item.type];
   if (item.rating) parts.push(`rating: ${item.rating}`);
   if (!isCustom(item)) {
     parts.push(`tmdb: ${item.tmdbId}`);
-    return parts.join(' · ');
+    return [parts.join(' · '), ...personalLines(item)].join('\n');
   }
   const c = item.custom ?? {};
   parts.push('custom');
@@ -461,13 +496,14 @@ export function itemToMarkdown(item: UserItem): string {
   if (c.cast?.length) parts.push(`cast: ${c.cast.map(oneLine).join(', ')}`);
   if (c.url) parts.push(`url: ${c.url}`);
   const about = c.overview?.split(/\n+/).map((l) => `  > ${l.trim()}`).filter((l) => l.length > 4) ?? [];
-  return [parts.join(' · '), ...about].join('\n');
+  return [parts.join(' · '), ...about, ...personalLines(item)].join('\n');
 }
 
 export function markdownHeader(date = new Date()) {
   return [
     `<!-- MovieMango export · ${date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} · ${APP_URL}`,
     'Each heading is a list. Each line is a title: "- Title (year) · movie|tv · rating: dislike|like|love · tmdb: id".',
+    'Indented "link: …" and "notes: …" lines under a title are your own watch link and notes.',
     'Edit it by hand or with an AI, then bring it back on the Import page.',
     `${CREDITS} -->`,
   ].join('\n');
@@ -481,6 +517,7 @@ export function listsToMarkdown(sections: { name: string; items: UserItem[] }[],
 
 export const MARKDOWN_SAMPLE = `# Watchlist
 - Kaithi (2019) · movie
+  notes: Amma recommended it
 - Paatal Lok (2020) · tv
 - Super Deluxe (2019) · movie · tmdb: 550776
 - The Shawshank Redemption · imdb: tt0111161

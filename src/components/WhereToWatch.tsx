@@ -1,7 +1,10 @@
+import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import { Box, Button, Link, Typography } from '@mui/material';
 import { img } from '../api/tmdb';
 import { trackEvent } from '../lib/analytics';
+import { linkHost } from '../lib/notes';
 import { playUrl, type Availability } from '../lib/providers';
 
 const ACCESS = { subscription: 'Subscription', free: 'Free', ads: 'Free with ads' } as const;
@@ -42,13 +45,30 @@ export function PlayButtons({ availability, title, myServices, compact }: { avai
   );
 }
 
-export function WhereToWatch({ availability, title, myServices, justWatchLink }: { availability: Availability[]; title: string; myServices: string[]; justWatchLink?: string }) {
+/** The user's own watch link: always shows where it goes, opens in a new tab without telling the site where you came from. */
+export function MyLinkButton({ url }: { url: string }) {
+  return (
+    <Button href={url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" variant="outlined" color="inherit" startIcon={<LinkRoundedIcon />} endIcon={<OpenInNewRoundedIcon />} onClick={() => trackEvent('my_link_click')} sx={{ textTransform: 'none' }}>
+      Your link
+      <Typography component="span" variant="caption" sx={{ ml: 0.75, opacity: 0.8 }}>
+        {linkHost(url)}
+      </Typography>
+    </Button>
+  );
+}
+
+export function WhereToWatch({ availability, title, myServices, justWatchLink, myLink }: { availability: Availability[]; title: string; myServices: string[]; justWatchLink?: string; myLink?: string }) {
   return (
     <Box>
       {availability.length ? (
         <PlayButtons availability={availability} title={title} myServices={myServices} />
       ) : (
         <Typography color="text.secondary">Not streaming on the major services in India right now (subscription or free).</Typography>
+      )}
+      {myLink && (
+        <Box sx={{ mt: 1 }}>
+          <MyLinkButton url={myLink} />
+        </Box>
       )}
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
         Streaming availability by{' '}

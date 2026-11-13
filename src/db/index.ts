@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import type { StreamingRow } from '../lib/streaming';
 import type { CustomList, UserItem } from '../lib/types';
 
 export interface KvRow {
@@ -30,6 +31,7 @@ class MovieMangoDb extends Dexie {
   kv!: Table<KvRow, string>;
   cache!: Table<CacheRow, string>;
   titles!: Table<TitleRow, string>;
+  streaming!: Table<StreamingRow, string>;
 
   constructor() {
     super('moviemango');
@@ -41,6 +43,8 @@ class MovieMangoDb extends Dexie {
     });
     // v2 only adds the recent-titles store; existing tables and rows are kept as they are.
     this.version(2).stores({ titles: 'key, accessedAt' });
+    // v3 adds where-it-streams info per title (src/db/streaming.ts).
+    this.version(3).stores({ streaming: 'key, checkedAt' });
   }
 }
 

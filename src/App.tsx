@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import { EngineProvider } from './components/EngineContext';
 import Layout from './components/Layout';
+import { StreamingProvider } from './components/Streaming';
 import { ItemsProvider } from './components/TitleActions';
 import { ToastProvider } from './components/Toast';
 import { useSettings } from './db/settings';
@@ -65,6 +66,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <ItemsProvider>
+            <StreamingProvider>
             <EngineProvider>
               <HashRouter>
                 <PageTracker />
@@ -97,6 +99,7 @@ export default function App() {
                 )}
               </HashRouter>
             </EngineProvider>
+            </StreamingProvider>
           </ItemsProvider>
         </ToastProvider>
       </QueryClientProvider>

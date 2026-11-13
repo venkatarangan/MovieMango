@@ -123,6 +123,11 @@ function load<T>(key: string, ttlMs: number, loader: () => Promise<T>, opts: Cac
   return promise;
 }
 
+/** Skips any cached copy: fetches now and stores the result (e.g. a "check again" button). */
+export function refreshCached<T>(key: string, ttlMs: number, loader: () => Promise<T>): Promise<T> {
+  return load(key, ttlMs, loader, {});
+}
+
 /**
  * Memory → IndexedDB → network. Fresh values never touch the network; concurrent loads share one request.
  * Expired values are served while refreshing in the background within `swrMs`, and are returned instead of

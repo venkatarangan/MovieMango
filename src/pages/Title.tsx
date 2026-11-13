@@ -4,7 +4,7 @@ import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
 import PlayCircleRoundedIcon from '@mui/icons-material/PlayCircleRounded';
 import { Alert, Avatar, Box, Button, Card, CardContent, Chip, CircularProgress, Link, Skeleton, Stack, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router';
 import { findReview, getReview } from '../api/mangoidiots';
 import { certificationOf, getDetails, img, mediaTypeOf, snapshotFromDetails, snapshotFromList, titleOf } from '../api/tmdb';
@@ -14,6 +14,7 @@ import { ErrorNote, SectionTitle } from '../components/common';
 import CustomTitleView from '../components/CustomTitleView';
 import { useEngine } from '../components/EngineContext';
 import EpisodeTracker from '../components/EpisodeTracker';
+import MyNotes from '../components/MyNotes';
 import ListActions from '../components/ListActions';
 import { MangoBadge } from '../components/Mango';
 import PosterCard, { Poster, PosterRow, ScrollRow } from '../components/PosterCard';
@@ -22,6 +23,7 @@ import ShareButton from '../components/ShareButton';
 import { WhereToWatch } from '../components/WhereToWatch';
 import { useItem } from '../db/items';
 import { useSettings } from '../db/settings';
+import { recordStreaming } from '../db/streaming';
 import { trackEvent } from '../lib/analytics';
 import { safeFilename, titleToText } from '../lib/exportText';
 import { formatRuntime } from '../lib/format';
@@ -56,6 +58,11 @@ function TmdbTitle() {
   const titles = d ? [...new Set([titleOf(d), d.original_title ?? d.original_name ?? ''].filter(Boolean))] : [];
 
   const review = useQuery({ queryKey: ['mango', type, id], queryFn: () => findReview(titles, year), enabled: !!d && !!settings?.useMangoidiots });
+  // Free update: the details already carry where it streams, so the shared streaming store learns it too.
+  const regionProviders = d && settings ? d['watch/providers']?.results?.[settings.region] : undefined;
+  useEffect(() => {
+    if (d && settings) void recordStreaming(`${type}:${id}`, availabilityFrom(regionProviders), { checked: false });
+  }, [d, settings?.region]); // eslint-disable-line react-hooks/exhaustive-deps
   const wiki = useQuery({ queryKey: ['wiki', d?.external_ids?.wikidata_id], queryFn: () => wikiSummaryForWikidata(d!.external_ids!.wikidata_id!), enabled: !!d?.external_ids?.wikidata_id });
 
   if (details.error) return <ErrorNote error={details.error} />;
@@ -192,7 +199,8 @@ function TmdbTitle() {
       </Box>
 
       <SectionTitle>Where to watch in India</SectionTitle>
-      <WhereToWatch availability={availability} title={snap.title} myServices={settings.services} justWatchLink={region?.link} />
+      <WhereToWatch availability={availability} title={snap.title} myServices={settings.services} justWatchLink={region?.link} myLink={item?.watchLink} />
+      <MyNotes snap={snap} />
 
       {type === 'tv' && <EpisodeTracker snap={snap} show={d} />}
 

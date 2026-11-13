@@ -62,7 +62,7 @@ export async function applyImport(decisions: ImportDecision[]): Promise<ImportSu
   const customs = new Map(
     (await db.items.filter((i) => isCustom(i) && i.lists.length > 0).toArray()).map((i) => [customKey(i.type, i.title, i.year), i.tmdbId]),
   );
-  const groups = new Map<string, { snap: TitleSnapshot; lists: Set<string>; rating?: MyRating; custom: boolean }>();
+  const groups = new Map<string, { snap: TitleSnapshot; lists: Set<string>; rating?: MyRating; custom: boolean; watchLink?: string; notes?: string }>();
   for (const { row, pick } of todo) {
     let snap: TitleSnapshot;
     if (pick === 'custom') {
@@ -77,11 +77,13 @@ export async function applyImport(decisions: ImportDecision[]): Promise<ImportSu
     const target = resolveImportList(row.list, row.rating);
     if (target.list) g.lists.add(listId.get(target.list) ?? 'watchlist');
     g.rating = target.rating ?? g.rating;
+    g.watchLink = row.watchLink ?? g.watchLink;
+    g.notes = row.notes ?? g.notes;
     groups.set(key, g);
   }
 
   for (const g of groups.values()) {
-    await importItem(g.snap, [...g.lists], g.rating);
+    await importItem(g.snap, [...g.lists], g.rating, { watchLink: g.watchLink, notes: g.notes });
     summary.titles++;
     if (g.custom) summary.custom++;
     else summary.matched++;

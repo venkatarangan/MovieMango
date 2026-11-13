@@ -91,7 +91,7 @@ function Help() {
             <code>· rating: love</code>, <code>like</code> or <code>dislike</code> adds your ❤️ 👍 👎 rating. Stars and scores (like 4/5 or 8/10) work too.
           </Typography>
           <Typography component="li" variant="body2">
-            <code>· custom</code> adds it as your own title, with an optional <code>· url: …</code> and a <code>&gt; description</code> line under it.
+            <code>· custom</code> adds it as your own title, with an optional <code>· url: …</code> and a <code>&gt; description</code> line under it. Indented <code>link: …</code> and <code>notes: …</code> lines under any title add your own watch link and notes.
           </Typography>
         </Box>
       </Section>

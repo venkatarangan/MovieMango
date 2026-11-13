@@ -1,3 +1,4 @@
+import { matchesStream, type StreamFilter, type StreamingRow } from './streaming';
 import type { MediaType, UserItem } from './types';
 
 /** Sorting and filtering for list pages (src/components/ListView.tsx). */
@@ -21,6 +22,14 @@ export interface ViewState {
   lang?: string;
   rating?: 'love' | 'like' | 'dislike' | 'none';
   decade?: number;
+  /** Where it streams: on my services, one service key, or not streaming. */
+  service?: StreamFilter;
+}
+
+/** Saved streaming info and the user's services, for the `service` filter. */
+export interface StreamContext {
+  rows: Map<string, StreamingRow>;
+  mine: string[];
 }
 
 const RATING_RANK = { love: 3, like: 2, dislike: 0 } as const;
@@ -38,8 +47,8 @@ const COMPARE: Record<SortKey, (a: UserItem, b: UserItem) => number> = {
   runtime: (a, b) => (a.runtime || 9999) - (b.runtime || 9999),
 };
 
-/** Filters and sorts a list without changing it. */
-export function applyView(items: UserItem[], v: ViewState, text = ''): UserItem[] {
+/** Filters and sorts a list without changing it. Find matches titles, original titles and your notes. */
+export function applyView(items: UserItem[], v: ViewState, text = '', stream?: StreamContext): UserItem[] {
   const q = text.trim().toLowerCase();
   return items
     .filter(
@@ -49,7 +58,8 @@ export function applyView(items: UserItem[], v: ViewState, text = ''): UserItem[
         (!v.lang || i.originalLanguage === v.lang) &&
         (!v.rating || (v.rating === 'none' ? !i.rating : i.rating === v.rating)) &&
         (!v.decade || decadeOf(i.year) === v.decade) &&
-        (!q || i.title.toLowerCase().includes(q) || !!i.custom?.originalTitle?.toLowerCase().includes(q)),
+        (!v.service || (!!stream && matchesStream(stream.rows.get(i.key), v.service, stream.mine) === true)) &&
+        (!q || i.title.toLowerCase().includes(q) || !!i.custom?.originalTitle?.toLowerCase().includes(q) || !!i.notes?.toLowerCase().includes(q)),
     )
     .sort((a, b) => COMPARE[v.sort](a, b) || a.title.localeCompare(b.title));
 }

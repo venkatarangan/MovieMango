@@ -1,5 +1,6 @@
 import { mergeRecords } from '../lib/backup';
-import type { CustomList, UserItem } from '../lib/types';
+import type { StreamingRow } from '../lib/streaming';
+import { isSaved, type CustomList, type UserItem } from '../lib/types';
 import { SYNCED_SETTINGS, type SyncedSettings } from '../db/settings';
 
 export interface SyncPayload {
@@ -8,6 +9,8 @@ export interface SyncPayload {
   savedAt: number;
   items: UserItem[];
   lists: CustomList[];
+  /** Where library titles stream (optional: older app versions don't send it). */
+  streaming?: StreamingRow[];
   settings: Partial<SyncedSettings>;
   settingsUpdatedAt: number;
 }
@@ -22,6 +25,7 @@ export function pickSynced(s: SyncedSettings): Partial<SyncedSettings> {
  */
 export function mergePayloads(local: SyncPayload, remote: SyncPayload | null): SyncPayload {
   if (!remote) return local;
+  const items = mergeRecords(local.items, remote.items ?? [], (i) => i.key);
   const localWins = local.settingsUpdatedAt >= remote.settingsUpdatedAt;
   const [winner, loser] = localWins ? [local.settings, remote.settings] : [remote.settings, local.settings];
   const settings: Partial<SyncedSettings> = { ...loser, ...winner };
@@ -30,11 +34,18 @@ export function mergePayloads(local: SyncPayload, remote: SyncPayload | null): S
     app: 'MovieMango',
     version: 1,
     savedAt: Date.now(),
-    items: mergeRecords(local.items, remote.items ?? [], (i) => i.key),
+    items,
     lists: mergeRecords(local.lists, remote.lists ?? [], (l) => l.id),
+    streaming: libraryStreaming(mergeRecords(local.streaming ?? [], remote.streaming ?? [], (r) => r.key), items),
     settings,
     settingsUpdatedAt: Math.max(local.settingsUpdatedAt, remote.settingsUpdatedAt),
   };
+}
+
+/** Only titles still in the library keep their streaming info in Drive. */
+export function libraryStreaming(rows: StreamingRow[], items: UserItem[]): StreamingRow[] {
+  const saved = new Set(items.filter(isSaved).map((i) => i.key));
+  return rows.filter((r) => saved.has(r.key));
 }
 
 /** Same content, ignoring when it was saved. */

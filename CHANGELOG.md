@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0 (2026-11-13)
+
+- Library: a new **Streaming** menu on every list. Pick On my services, any one service (yours first, then others that carry something in the list) or Not streaming, with counts. The choice is remembered per list, and Share/Export follow it.
+- Where a title streams is checked once and saved. Library titles keep that answer until you tap ⟳ next to the menu, which checks them all again and tells you how many changed. Titles you've only seen while browsing are checked again after 2 days.
+- Streaming logos on posters in the Library, Browse and Home: your services first, and "New" when one of them got the title this week.
+- Browse: the "On my services" switch is now a Streaming menu (On my services or any one service). TMDB does the filtering, so it costs nothing extra. Posters are checked only once you've stopped on them for a moment, a few at a time, and never twice.
+- Saved streaming info syncs to your Google Drive with your lists, in the same batched sync, so other devices don't need to check again. "New on your services" now syncs too.
+- **Your link and notes** on any saved title: a legal place to watch it that isn't one of the known services (like a YouTube upload by the makers), and up to 1 KB of notes. Saved as you type, private, synced to your own Drive. The link shows on the title page next to the services. Posters with notes get a small mark, and "Find in this list" searches your notes.
+- Markdown export and import carry your link and notes as indented `link:` and `notes:` lines. A "notes" or "review" column in an imported list now becomes your notes (descriptions use `>` lines or "description").
+- README and the privacy note now mention your notes, watch links and saved streaming info.
+
 ## 0.3.4 (2026-11-07)
 
 - About: the "Books by the author" heading now matches the other section headings.

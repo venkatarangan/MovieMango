@@ -1,19 +1,31 @@
 import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import { Badge, Box, Button, Chip, InputAdornment, MenuItem, Popover, Stack, TextField, Typography } from '@mui/material';
-import { useMemo, useState, type ReactNode } from 'react';
+import { Badge, Box, Button, Chip, Divider, IconButton, InputAdornment, LinearProgress, ListSubheader, MenuItem, Popover, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { isOffline } from '../api/http';
+import { checkMany } from '../db/streaming';
 import { genreName } from '../lib/genres';
 import { languageName } from '../lib/languages';
 import { applyView, decadeOf, SORTS, type SortKey, type ViewState } from '../lib/listView';
+import { SERVICES, serviceByKey } from '../lib/providers';
 import { MY_RATINGS } from '../lib/ratings';
-import type { UserItem } from '../lib/types';
+import { streamCounts, type StreamFilter } from '../lib/streaming';
+import { isCustom, type UserItem } from '../lib/types';
 import PosterCard, { PosterGrid } from './PosterCard';
+import { useStreaming } from './Streaming';
+import { useToast } from './Toast';
+
+export const streamLabel = (f: StreamFilter) => (f === 'mine' ? 'On my services' : f === 'none' ? 'Not streaming' : `On ${serviceByKey(f)?.name ?? f}`);
+const shortDate = (t: number) => new Date(t).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: new Date(t).getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
 
 const STORE = 'mm.view.';
 function load(key: string, fallback: ViewState): ViewState {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE + key) ?? 'null');
-    return saved && SORTS.some((s) => s.key === saved.sort) ? { ...fallback, ...saved } : fallback;
+    if (!saved || !SORTS.some((s) => s.key === saved.sort)) return fallback;
+    if (saved.service && !['mine', 'none'].includes(saved.service) && !serviceByKey(saved.service)) delete saved.service;
+    return { ...fallback, ...saved };
   } catch {
     return fallback;
   }
@@ -34,7 +46,36 @@ export default function ListView({ viewKey, items, defaultSort = 'added', action
     }
   };
 
-  const shown = useMemo(() => applyView(items, view, text), [items, view, text]);
+  const stream = useStreaming();
+  const toast = useToast();
+  const shown = useMemo(() => applyView(items, view, text, stream), [items, view, text, stream]);
+  const counts = useMemo(() => streamCounts(items, stream.rows, stream.mine), [items, stream]);
+  const others = SERVICES.filter((s) => !stream.mine.includes(s.key) && counts.byService[s.key]);
+
+  // Checks run through the shared queue (src/db/streaming.ts); this only tracks progress for the line below.
+  const [progress, setProgress] = useState<{ kind: 'check' | 'refresh'; done: number; total: number } | null>(null);
+  const tried = useRef(new Set<string>());
+  const checkNew = () => {
+    if (progress) return;
+    const todo = items.filter((i) => !isCustom(i) && !stream.rows.has(i.key) && !tried.current.has(i.key));
+    if (!todo.length || isOffline()) return;
+    todo.forEach((i) => tried.current.add(i.key));
+    void checkMany(todo, { onProgress: (done, total) => setProgress({ kind: 'check', done, total }) }).finally(() => setProgress(null));
+  };
+  // A remembered Streaming filter needs every title's info, so check the new ones on arrival.
+  useEffect(() => {
+    if (view.service && counts.unknown) checkNew();
+  }, [view.service, counts.unknown]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const checked = items.filter((i) => !isCustom(i) && stream.rows.has(i.key));
+  const oldest = checked.reduce((m, i) => Math.min(m, stream.rows.get(i.key)!.checkedAt), Infinity);
+  const refresh = async () => {
+    if (progress || !checked.length) return;
+    const { changed, failed } = await checkMany(checked, { fresh: true, onProgress: (done, total) => setProgress({ kind: 'refresh', done, total }) }).finally(() => setProgress(null));
+    if (failed === checked.length) toast('Couldn’t reach TMDB just now. Your saved info is unchanged; try again later.', 'warning');
+    else toast(changed ? `Updated. ${changed} title${changed === 1 ? '' : 's'} changed services.` : 'Up to date. No changes.', 'success');
+  };
+
   // Filter choices come from what's in the list.
   const options = useMemo(() => {
     const count = <K,>(keys: (K | undefined)[]) => {
@@ -83,6 +124,39 @@ export default function ListView({ viewKey, items, defaultSort = 'added', action
             </MenuItem>
           ))}
         </TextField>
+        <TextField
+          select
+          size="small"
+          label="Streaming"
+          value={view.service ?? ''}
+          onChange={(e) => update({ service: (e.target.value || undefined) as StreamFilter | undefined })}
+          sx={{ minWidth: 170 }}
+          slotProps={{ inputLabel: { shrink: true }, select: { displayEmpty: true, onOpen: checkNew, MenuProps: { slotProps: { paper: { sx: { maxHeight: 420 } } } } } }}
+        >
+          <MenuItem value="">Any</MenuItem>
+          <MenuItem value="mine">On my services ({counts.mine})</MenuItem>
+          {stream.mine.length > 0 && <ListSubheader>Your services</ListSubheader>}
+          {stream.mine.map((k) => (
+            <MenuItem key={k} value={k}>
+              {serviceByKey(k)?.name ?? k} ({counts.byService[k] ?? 0})
+            </MenuItem>
+          ))}
+          {others.length > 0 && <ListSubheader>Other services</ListSubheader>}
+          {others.map((s) => (
+            <MenuItem key={s.key} value={s.key}>
+              {s.name} ({counts.byService[s.key]})
+            </MenuItem>
+          ))}
+          <Divider />
+          <MenuItem value="none">Not streaming ({counts.none})</MenuItem>
+        </TextField>
+        <Tooltip title={checked.length ? `Where these stream was last checked ${shortDate(oldest)}. Tap to check again.` : 'Nothing checked yet. Pick a Streaming option first.'}>
+          <span>
+            <IconButton aria-label="Check where these stream again" onClick={refresh} disabled={!checked.length || !!progress || isOffline()}>
+              <RefreshRoundedIcon sx={progress?.kind === 'refresh' ? { animation: 'mm-spin 1s linear infinite', '@keyframes mm-spin': { to: { transform: 'rotate(360deg)' } } } : undefined} />
+            </IconButton>
+          </span>
+        </Tooltip>
         <Badge badgeContent={active} color="primary">
           <Button color="inherit" variant="outlined" startIcon={<FilterListRoundedIcon />} onClick={(e) => setAnchor(e.currentTarget)} sx={{ borderColor: 'divider' }}>
             Filter
@@ -130,13 +204,27 @@ export default function ListView({ viewKey, items, defaultSort = 'added', action
           )}
         </Stack>
       </Popover>
-      {active > 0 && (
+      {(active > 0 || view.service) && (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+          {view.service && <Chip size="small" label={streamLabel(view.service)} onDelete={() => update({ service: undefined })} />}
           {view.genre && <Chip size="small" label={genreName(view.genre)} onDelete={() => update({ genre: undefined })} />}
           {view.lang && <Chip size="small" label={languageName(view.lang)} onDelete={() => update({ lang: undefined })} />}
           {view.rating && <Chip size="small" label={ratingLabel(view.rating)} onDelete={() => update({ rating: undefined })} />}
           {view.decade && <Chip size="small" label={`${view.decade}s`} onDelete={() => update({ decade: undefined })} />}
         </Box>
+      )}
+      {progress && (
+        <Box sx={{ mb: 1.5, maxWidth: 420 }} role="status">
+          <Typography variant="body2" color="text.secondary">
+            {progress.kind === 'refresh' ? `Refreshing ${progress.done} of ${progress.total}…` : `Checking where ${progress.done} of ${progress.total} stream…`}
+          </Typography>
+          <LinearProgress variant="determinate" value={progress.total ? (100 * progress.done) / progress.total : 0} sx={{ mt: 0.5, height: 3, borderRadius: '2px' }} />
+        </Box>
+      )}
+      {view.service && !progress && (counts.custom > 0 || counts.unknown > 0) && (
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          {[counts.custom ? `${counts.custom} of your own titles ${counts.custom === 1 ? 'isn’t' : 'aren’t'} included.` : '', counts.unknown ? `${counts.unknown} title${counts.unknown === 1 ? '' : 's'} couldn’t be checked yet.` : ''].filter(Boolean).join(' ')}
+        </Typography>
       )}
       {shown.length < items.length && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
@@ -146,12 +234,12 @@ export default function ListView({ viewKey, items, defaultSort = 'added', action
       {shown.length ? (
         <PosterGrid>
           {shown.map((i) => (
-            <PosterCard key={i.key} snap={i} />
+            <PosterCard key={i.key} snap={i} streaming="check" />
           ))}
         </PosterGrid>
       ) : (
         <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
-          Nothing matches. Try clearing a filter.
+          {view.service && progress ? 'Checking where these stream…' : 'Nothing matches. Try clearing a filter.'}
         </Typography>
       )}
     </Box>
