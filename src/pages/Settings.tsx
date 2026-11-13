@@ -164,7 +164,7 @@ export default function SettingsPage() {
 
         <Section title="Privacy">
           {analyticsConfigured() ? (
-            <Toggle checked={settings.analytics} onChange={(v) => saveSettings({ analytics: v })} label="Share anonymous usage stats" help="Page views and feature use only, never titles, lists, moods, ratings or keys." />
+            <Toggle checked={settings.analytics} onChange={(v) => saveSettings({ analytics: v })} label="Share anonymous usage stats" help="Counts which pages and features are used, never titles, lists, searches, notes or keys. Helps us see what to improve." />
           ) : (
             <Typography variant="body2" color="text.secondary">
               This build has no analytics.

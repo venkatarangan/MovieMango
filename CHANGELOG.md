@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 (2026-11-13)
+
+- Google Analytics is now on for the public site (anonymous page and feature counts; turn it off in Settings → Privacy).
+- The privacy note, About, Settings and README explain exactly what's counted and what never is.
+
 ## 0.4.0 (2026-11-13)
 
 - Library: a new **Streaming** menu on every list. Pick On my services, any one service (yours first, then others that carry something in the list) or Not streaming, with counts. The choice is remembered per list, and Share/Export follow it.

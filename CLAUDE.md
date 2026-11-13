@@ -43,7 +43,7 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 ## Open items
 - Infra is complete (DNS, Pages, HTTPS). Social features (posts, reactions, friends) are out of scope; they would need a server.
 - Google OAuth web client created 2026-10-07 (scopes `drive.appdata`, `openid`, `email`; origins watch.mangoidiots.com, localhost:5173 and :4173). The client ID is in the Actions variable `GOOGLE_CLIENT_ID` and in the local, git-ignored `.env.local`. The app is published but not yet brand-verified, so users see Google's "unverified app" screen until Branding and Verification Center are done (free for these scopes). The Drive API has no per-call cost to the owner; data counts against each user's own Drive.
-- GA4 ID not supplied yet (Actions variable `GA_ID`).
+- GA4 on since 2026-11-13 (Actions variable `GA_ID` = G-NBWLMTZJ22); copy in privacy.html, the in-app privacy page and Settings must match what `src/lib/analytics.ts` and `trackEvent` calls send.
 - Built 2026-10-07 (v0.3.0): 👎 👍 ❤️ ratings, poster ＋/👎 with Undo, Library Loved/Not for me tabs, list sort/filter/find, genre browse pages, person pages, World picks, language of the week, Tonight "Any language", row arrows, batched Drive sync.
 - Built 2026-10-03: Home page, TV episode tracking, custom titles, Markdown import/export, Drive sync options, search links, TMDB caching. "Now on your services" is an in-app Home row only (no notifications).
 - Built 2026-11-12 (v0.4.0): shared streaming info (`src/db/streaming.ts`: one checker, one store synced for library titles, poster logos), Library and Browse Streaming menus with ⟳ refresh, your watch link and notes on saved titles.

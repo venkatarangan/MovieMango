@@ -107,6 +107,9 @@ export default function About() {
       </Box>
 
       <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+        The public site counts anonymous page and feature use with Google Analytics, never your titles, lists, searches or keys, and you can turn it off in Settings → Privacy.
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
         v{APP_VERSION} · MIT · {ext(SOURCE_URL, 'Source on GitHub')} · <Link component={RouterLink} to="/privacy">Privacy</Link>
       </Typography>
     </Box>

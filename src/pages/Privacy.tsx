@@ -33,11 +33,30 @@ export default function Privacy() {
       <Typography>Gemini Nano (Chrome) and Qwen (WebGPU) run entirely on your device. Nothing you type is sent anywhere.</Typography>
 
       <Typography variant="h6" component="h2">Analytics</Typography>
-      <Typography>
-        {analyticsConfigured()
-          ? 'This site uses Google Analytics to count anonymous page views and which features are used. It never sends titles, lists, moods, ratings, review reads or keys. Advertising features are off. You can turn analytics off in Settings → Privacy.'
-          : 'This build has no analytics.'}
-      </Typography>
+      {analyticsConfigured() ? (
+        <>
+          <Typography>
+            This site uses Google Analytics to count how MovieMango is used, so the author can see what is worth improving. It is on by default; turn it off any time in Settings → Privacy (“Share anonymous usage stats”). Once it’s off, nothing more is sent, and if it’s off when you open the app, the Google Analytics script isn’t even loaded. No personal information is collected.
+          </Typography>
+          <Typography sx={{ mt: 1 }}>
+            <b>What is counted.</b> Page views: only the kind of page, with ids removed (for example “/title/movie”, never which title), and no search text. Feature use: the name of a feature plus a few small details, such as search was used (never what you searched for), which streaming service’s Play button was tapped, which rating button was used (never for which title), a title was added to or removed from Watchlist, Watched or a custom list (never the list’s name or titles), what kind of share and how, an import started or finished (counts), a Tonight run (AI engine, minutes, discovery on or off, and whether you typed something, never what you typed), onboarding finished (counts), Google Drive connected or failed, keys saved (the fact only, never the key), notes saved (which field, never the content), an episode marked, and a custom title added, edited or deleted.
+          </Typography>
+          <Typography sx={{ mt: 1 }}>
+            <b>What is never sent.</b> Titles, list names or contents, search words, moods or anything you type, your notes or links, ratings tied to titles, API keys, your Google account email, or anything from your Drive.
+          </Typography>
+          <Typography sx={{ mt: 1 }}>
+            <b>Advertising is off.</b> Ads storage, ad personalisation, ad user data and Google signals are all switched off, and the data is not used for ads.
+          </Typography>
+          <Typography sx={{ mt: 1 }}>
+            <b>Cookies and your IP address.</b> Google Analytics sets a first-party cookie holding a random ID, which tells one visit from another. It isn’t linked to your name or email. As with any website, Google sees your IP address briefly while serving the request, and uses it to estimate your country and city; Google Analytics doesn’t store it.
+          </Typography>
+          <Typography sx={{ mt: 1 }}>
+            <b>What the author sees.</b> Only aggregate reports: counts of pages and features, countries and device types. Never anything that identifies a person. There is no MovieMango server. An ad blocker may block Google Analytics; MovieMango works exactly the same.
+          </Typography>
+        </>
+      ) : (
+        <Typography>This build has no analytics.</Typography>
+      )}
 
       <Typography variant="h6" component="h2">Contact</Typography>
       <Typography>Questions or concerns: open an issue on the project’s GitHub page.</Typography>

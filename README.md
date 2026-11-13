@@ -36,7 +36,7 @@ I love movies, and not just Indian and Hollywood ones; some of my favourites com
 
 ## Privacy
 
-There's no MovieMango server. Your lists, ratings, notes, streaming info and keys live in your browser and, if you connect it, a hidden app folder in your own Google Drive that MovieMango alone can use. On-device AI never sends your prompts anywhere. The public site counts anonymous page views (never your titles or lists); you can turn that off in Settings. [Full privacy note](https://watch.mangoidiots.com/privacy.html).
+There's no MovieMango server. Your lists, ratings, notes, streaming info and keys live in your browser and, if you connect it, a hidden app folder in your own Google Drive that MovieMango alone can use. On-device AI never sends your prompts anywhere. The public site uses Google Analytics to count which pages and features are used (never your titles, lists, searches, notes or keys, and no ads or personal information); you can turn that off in Settings → Privacy. [Full privacy note](https://watch.mangoidiots.com/privacy.html).
 
 ## For developers
 

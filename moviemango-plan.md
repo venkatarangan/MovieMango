@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). §35 Google Analytics switched on (GA_ID set), privacy copy and docs updated (0.4.1). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -1092,3 +1092,20 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 - Your link and notes (1 KB) on any saved title: title page card, "Your link" button, poster mark, notes search, Markdown `link:`/`notes:` lines. Not in text shares.
 - Changes from the plan: logos sit bottom-left (top-left crowded the ＋/👎 buttons on phones); an imported "notes" column always becomes your notes, also for custom titles (descriptions use `>` lines), so Markdown round-trips without loss.
 - 0.4.0. Tests: 138 unit, 22 e2e (phone and desktop) pass. Not committed or pushed yet.
+
+## 35. Twenty-sixth-round prompts (verbatim) and response
+
+> please ensure the readme.md and other docs are updated; temporary files are cleaned; no pii is pushed; then push it to github. verify. use sonnet and haiku for these tasks
+
+> perfect. anything else pending
+
+> 1. give me instructions for google brand verification. 2. instructions for the ga4 id
+
+> here is the tag for google analytics, set the variable in github: [pasted a Google Tag Manager snippet, container GTM-52FXJ95G]
+
+> here is the measurement id: G-NBWLMTZJ22. add it to github variable. update the privacy, about, readme.md and other docs to reflect google analytics, explain what is being collected and no PII is ever accessed by google or author (reword to sound correct and nice). ask me for clarifications if any. check and push. verify. use sonnet for implementation. haiku for verification.
+
+- 0.4.0 docs and privacy note updated, scanned for personal data, pushed and verified live.
+- Gave the steps for Google brand verification and for GA4. Noted the privacy page is linked from the app footer, About and Settings (Settings → Privacy details), not only from About.
+- Declined the GTM container id (GTM-...) in favour of the GA4 `G-` measurement id, which is what the app's built-in tag needs.
+- `GA_ID` set to the measurement id. Privacy note (`public/privacy.html`, in-app Privacy page), About, Settings help text, README and docs now say plainly that Google Analytics is used and exactly what is and is not sent (0.4.1). GA4 enhanced measurement "Page changes based on browser history events" should be off.
