@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2 (2026-11-13)
+
+- Analytics: the page address given to Google Analytics never includes anything after "?" or "#", so even a page view Google's tag sends by itself can't carry a search or a title.
+
 ## 0.4.1 (2026-11-13)
 
 - Google Analytics is now on for the public site (anonymous page and feature counts; turn it off in Settings → Privacy).
