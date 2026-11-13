@@ -6,6 +6,10 @@
 
 MovieMango is a personal movie and TV companion. Tell it how much time you have and how you feel, and your AI movie buff picks something streaming on **your** services in India, in **your** languages, and tells you why. Tap Play to open it on Netflix, Prime Video, JioHotstar and more.
 
+<p align="center"><img src="screenshots/homepage-0.4.2.png" alt="MovieMango home page (v0.4.2)" width="360" /></p>
+
+More screenshots (v0.4.2, posters softened and personal details blurred): [Tonight](screenshots/tonight-page-0.4.2.png) · [Reviews](screenshots/reviews-page-0.4.2.png) · Settings [1](screenshots/settings-page1-0.4.2.png), [2](screenshots/settings-page2-0.4.2.png), [3](screenshots/settings-page3-0.4.2.png)
+
 ## Why I built this
 
 I love movies, and not just Indian and Hollywood ones; some of my favourites come from all over the world. For years, my watched list and watchlist were scattered across Google, IMDb, YouTube, JustWatch and Plex, and I kept exporting and importing between them. I didn't want my movie life locked inside OTT apps or big tech, or to pay a subscription just to keep a list in the cloud. I'd meant to build this for years; with Claude's help, I finally did. Now I have one place to track what's good and discover what's next, and my data stays mine, ready for my own AI assistant to work with.

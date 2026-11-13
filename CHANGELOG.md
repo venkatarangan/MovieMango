@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.3 (2026-11-13)
+
+- README: screenshots of the app (v0.4.2) added in `screenshots/`, with personal details blurred and movie posters softened.
+
 ## 0.4.2 (2026-11-13)
 
 - Analytics: the page address given to Google Analytics never includes anything after "?" or "#", so even a page view Google's tag sends by itself can't carry a search or a title.

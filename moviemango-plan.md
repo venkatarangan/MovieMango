@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). §35 Google Analytics switched on (GA_ID set), privacy copy and docs updated (0.4.1). §36 GA/branding check, clean GA page address (0.4.2). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). §35 Google Analytics switched on (GA_ID set), privacy copy and docs updated (0.4.1). §36 GA/branding check, clean GA page address (0.4.2). §37 README screenshots, blurred (0.4.3). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -1119,3 +1119,12 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 - Checked from outside: Search Console TXT record on mangoidiots.com; Google sign-in shows "to continue to MovieMango" with the logo, Privacy Policy → `#/privacy`, Terms → `#/about`; GA4 hits reach G-NBWLMTZJ22 with ads personalisation off.
 - Found Google's tag sending its own page view at load with the full URL (query string included). Owner turned off Enhanced measurement; 0.4.2 sets `page_location` in the gtag config to origin + path only (`src/lib/analytics.ts`).
 
+
+## 37. Twenty-eighth-round prompts (verbatim) and response
+
+> I have screenshots of my session of couple of pages in the app @screenshots/. launch agents to check whether there is any PII information in the screenshot, if so, list them and blur them. launch agents with haiku model to do: also there are movie posters in the screenshots, blurred them little to avoid copyright issues but give a feel. also rename the screenshot files with the version 0.4.2 number so that we know it was a snapshot. then add one screenshot in the readme.md, about, then give links to the other screenshots from the screenshots folder.
+
+> push it
+
+- Six Haiku agents, one per screenshot. Only PII: the Google account email on Settings page 3 (blurred). Posters lightly blurred (radius 5) on Home, Tonight and Reviews. Files renamed `*-0.4.2.png`.
+- README shows the home screenshot and links the rest. Pushed as 0.4.3.
