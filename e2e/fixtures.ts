@@ -86,7 +86,7 @@ function tmdb(path: string, search: URLSearchParams) {
       known_for_department: director ? 'Directing' : 'Acting',
       biography: 'An Indian filmmaker known for gritty, grounded stories. '.repeat(8),
       birthday: '1975-09-04',
-      place_of_birth: 'Chennai, India',
+      place_of_birth: 'Sample City, India',
       profile_path: null,
       combined_credits: {
         cast: director

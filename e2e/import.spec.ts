@@ -27,17 +27,17 @@ test('custom titles, Markdown import and export', async ({ page }, info) => {
   await page.getByRole('button', { name: 'Add your own title' }).click();
   const dialog = page.getByRole('dialog', { name: 'Add your own title' });
   await expect(dialog.getByLabel(/Title \(in English\)/)).toHaveValue('Our wedding zzz');
-  await dialog.getByLabel(/Title \(in English\)/).fill('Our Wedding Video');
-  await dialog.getByLabel('Original title').fill('எங்கள் திருமணம்');
+  await dialog.getByLabel(/Title \(in English\)/).fill('Sample Home Video');
+  await dialog.getByLabel('Original title').fill('மாதிரி வீடியோ');
   await dialog.getByLabel('Year').fill('2018');
   await dialog.getByRole('checkbox', { name: 'Family' }).click();
-  await dialog.getByLabel('Description').fill('Shot on VHS in Madurai.\nThe whole family is in it.');
-  await dialog.getByLabel('Director').fill('Appa');
-  await dialog.getByLabel('Cast').fill('Amma, Paati, Me');
+  await dialog.getByLabel('Description').fill('Shot on VHS. A sample home video.\nThe whole cast is in it.');
+  await dialog.getByLabel('Director').fill('Jamie');
+  await dialog.getByLabel('Cast').fill('Alex, Sam');
   await dialog.getByLabel('Link for more information').fill('javascript:alert(1)');
   await expect(dialog.getByText(/Use a web link starting with http/)).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Add title' })).toBeDisabled();
-  await dialog.getByLabel('Link for more information').fill('https://example.com/wedding');
+  await dialog.getByLabel('Link for more information').fill('https://example.com/sample');
   await dialog.getByRole('combobox', { name: 'Add to' }).click();
   await page.getByRole('option', { name: 'Watched' }).click();
   await expect(page.getByRole('listbox')).toBeHidden();
@@ -45,10 +45,10 @@ test('custom titles, Markdown import and export', async ({ page }, info) => {
   await dialog.getByRole('button', { name: 'Add title' }).click();
 
   await expect(page).toHaveURL(/#\/title\/movie\/-\d+$/);
-  await expect(page.getByRole('heading', { name: 'Our Wedding Video' })).toBeVisible();
-  await expect(page.getByText('எங்கள் திருமணம்').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sample Home Video' })).toBeVisible();
+  await expect(page.getByText('மாதிரி வீடியோ').first()).toBeVisible();
   await expect(page.getByText('Added by you · not in TMDB')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'example.com' })).toHaveAttribute('href', 'https://example.com/wedding');
+  await expect(page.getByRole('link', { name: 'example.com' })).toHaveAttribute('href', 'https://example.com/sample');
   await expect(page.getByRole('button', { name: 'Watched' })).toHaveClass(/MuiButton-contained/);
   await page.getByRole('button', { name: 'Liked it' }).click();
   await page.getByRole('button', { name: 'Edit' }).click();
@@ -89,7 +89,7 @@ test('custom titles, Markdown import and export', async ({ page }, info) => {
   await page.getByRole('tab', { name: 'Watchlist' }).click();
   for (const t of ['Madras Nights', 'Starfall 12', 'Some Unknown Film zzz']) await expect(page.getByText(t, { exact: true }).last()).toBeVisible();
   await page.getByRole('tab', { name: 'Watched' }).click();
-  await expect(page.getByText('Our Wedding Video', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Sample Home Video', { exact: true }).first()).toBeVisible();
   // Tea Estate came in as ❤️, which also means watched.
   await expect(page.getByText(/^Tea Estate/).first()).toBeVisible();
   await expect(page.getByText('Custom', { exact: true })).toBeVisible();
@@ -115,7 +115,7 @@ test('custom titles, Markdown import and export', async ({ page }, info) => {
     expect(md).toContain('not endorsed or certified by TMDB');
     expect(md).toContain('# Watchlist\n- ');
     expect(md).toContain('- Madras Nights (2003) · movie · tmdb: 103');
-    expect(md).toContain('- Our Wedding Video (2019) · movie · rating: like · custom · original: எங்கள் திருமணம் · genres: Family · director: Appa · cast: Amma, Paati, Me · url: https://example.com/wedding\n  > Shot on VHS in Madurai.');
+    expect(md).toContain('- Sample Home Video (2019) · movie · rating: like · custom · original: மாதிரி வீடியோ · genres: Family · director: Jamie · cast: Alex, Sam · url: https://example.com/sample\n  > Shot on VHS. A sample home video.');
     expect(md).toContain('# 🌧️ Rainy day comfort');
   } else {
     await expect(page.getByRole('menuitem', { name: /Share as Markdown/ })).toBeVisible();

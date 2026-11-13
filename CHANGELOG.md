@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.4 (2026-11-13)
+
+- Link previews: sharing watch.mangoidiots.com on WhatsApp, Facebook, X, LinkedIn, Telegram and similar apps now shows a picture, title and description (Open Graph and Twitter card tags, 42 KB share image). The privacy page has its own preview.
+- Test fixtures use neutral sample text; `tmp/` is git-ignored.
+
 ## 0.4.3 (2026-11-13)
 
 - README: screenshots of the app (v0.4.2) added in `screenshots/`, with personal details blurred and movie posters softened.

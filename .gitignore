@@ -12,5 +12,6 @@ __pycache__
 backup.bat
 .claude/worktrees/
 temp/
+tmp/
 backup.ps1
 drafts/

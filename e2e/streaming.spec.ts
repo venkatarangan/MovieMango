@@ -40,11 +40,11 @@ test('Library: filter by streaming service, refresh saved info, logos on posters
   await mockApis(page);
   await seedOnboarded(page);
   // 102 Netflix · 103 Prime + JioHotstar · 105 Netflix + Prime · 901 nowhere · 902 ZEE5 · plus a custom title.
-  await seedItems(page, [...[102, 103, 105, 901, 902].map(saved), { key: 'movie:-5', tmdbId: -5, type: 'movie', title: 'Our Wedding Video', genreIds: [], lists: ['watchlist'], custom: {}, addedAt: 1, updatedAt: 1 }]);
+  await seedItems(page, [...[102, 103, 105, 901, 902].map(saved), { key: 'movie:-5', tmdbId: -5, type: 'movie', title: 'Sample Home Video', genreIds: [], lists: ['watchlist'], custom: {}, addedAt: 1, updatedAt: 1 }]);
   const calls = countProviderCalls(page);
 
   await page.goto('/#/library');
-  await expect(page.getByText('Our Wedding Video').first()).toBeVisible();
+  await expect(page.getByText('Sample Home Video').first()).toBeVisible();
   const streaming = page.getByRole('combobox', { name: 'Streaming' });
   await streaming.click();
   // Opening the menu checks every title once; counts fill in.
