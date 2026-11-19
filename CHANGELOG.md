@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2 (2026-11-19)
+
+- iPhone and iPad: the clipboard card now shows a box ("Tap here, then Paste"). iOS refuses to let a web app read the clipboard, even right after a tap, so "Search the clipboard text" ended in an error. Pasting into the box is your own paste, which iOS always allows, and it starts the search straight away (links and "(2024)" are still cleaned off). Android is unchanged.
+
 ## 0.5.1 (2026-11-19)
 
 - Clipboard search fix: shared text such as a title followed by a link is cleaned to just the title (links, emails, quotes, a trailing "(2024)" or "- IMDb" are removed), so the search finds it. Before, the link stayed in the search text and nothing matched.

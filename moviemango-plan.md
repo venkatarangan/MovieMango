@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). §35 Google Analytics switched on (GA_ID set), privacy copy and docs updated (0.4.1). §36 GA/branding check, clean GA page address (0.4.2). §37 README screenshots, blurred (0.4.3). §38 link-preview (OG) tags and image, repo PII clean-up, git email rewritten (0.4.4). §39 installed-app launch (quiet Drive reconnect, clipboard search card) and skipping AI setup (0.5.0). §40 clipboard search fix (0.5.1). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). §35 Google Analytics switched on (GA_ID set), privacy copy and docs updated (0.4.1). §36 GA/branding check, clean GA page address (0.4.2). §37 README screenshots, blurred (0.4.3). §38 link-preview (OG) tags and image, repo PII clean-up, git email rewritten (0.4.4). §39 installed-app launch (quiet Drive reconnect, clipboard search card) and skipping AI setup (0.5.0). §40 clipboard search fix (0.5.1), §41 iPhone paste box (0.5.2). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -1158,4 +1158,14 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 
 - 0.5.0 pushed with About ("Install it", AI optional), README, architecture docs and privacy copy. Reconnect and Skip AI confirmed fine on the owner's device.
 - Clipboard bug hunt: couldn't reproduce the exact failure, but found that the text was not cleaned (a title + link share searched for "Title https://…", "(2024)" and "- IMDb" stayed in, quotes stayed) and a rejected text opened an empty Search page silently. `clipboardQuery` now takes the first meaningful line, strips links, emails, quotes, trailing year and site names, allows a title plus one detail line; `LaunchActions` shows a toast for each failure. New unit and e2e tests (shared snippet, already on Search, not-a-title). Shipped as 0.5.1.
+
+
+## 41. Thirty-second-round prompt (verbatim) and response
+
+> yes, go ahead
+
+> @templocal/screenshot-error-1.jpeg see this error in iphone
+
+- 0.5.1 pushed. The owner's iPhone screenshot showed the toast "Your phone didn't let MovieMango read the clipboard": iOS rejected `navigator.clipboard.readText()` even after tapping the card's button.
+- Fix (0.5.2): on iPhone/iPad (read blocked) the card shows a text box at the top; the user's own Paste fires the `paste` event (no permission needed) and starts the search. Android still shows the found text. Copy updated in Settings, both privacy pages, About, architecture; e2e rewritten to simulate a paste.
 

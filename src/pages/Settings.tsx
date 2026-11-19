@@ -158,7 +158,7 @@ export default function SettingsPage() {
             checked={settings.launchClipboardSearch}
             onChange={(v) => saveSettings({ launchClipboardSearch: v })}
             label="Offer to search what I copied"
-            help="When the app opens, if you’ve copied something that looks like a title, a small card asks “Search the clipboard text”. It only searches when you tap it, the text goes to TMDB as a normal search and is never stored. iPhone and iPad make you tap before MovieMango can look."
+            help="When the app opens, if you’ve copied something that looks like a title, a small card asks “Search the clipboard text”. It only searches when you tap it, the text goes to TMDB as a normal search and is never stored. iPhone and iPad don’t let apps look at the clipboard, so there you tap a box and choose Paste instead."
           />
         </Section>
 

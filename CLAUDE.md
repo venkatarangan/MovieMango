@@ -38,6 +38,7 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 - Custom titles have a **negative `tmdbId`**: never send one to TMDB (`isCustom()`).
 - TMDB responses are cached hard (`src/api/http.ts`, `src/api/recent.ts`); cached objects are shared, so don't mutate them. Every new TMDB call should go through `tmdbGet`.
 - Drive sync is batched (2-minute window, at most 3 Drive calls per sync, one sync at a time, backoff on 429/403 rate limits/5xx). Don't sync per change; see `docs/architecture.md`.
+- iOS (Safari and the home-screen app) rejects `navigator.clipboard.readText()` even right after a tap, so the launch clipboard card uses a paste box (the user's own `paste` event) on iPhone/iPad; only Android Chrome can read it. Confirmed on a real iPhone with 0.5.1.
 - The Chrome Prompt API has been stable for web pages since Chrome 148. Check fast-moving facts like this before stating limits.
 
 ## Open items
@@ -47,7 +48,7 @@ Private, free, open movie/TV companion PWA. Live at https://watch.mangoidiots.co
 - Built 2026-10-07 (v0.3.0): 👎 👍 ❤️ ratings, poster ＋/👎 with Undo, Library Loved/Not for me tabs, list sort/filter/find, genre browse pages, person pages, World picks, language of the week, Tonight "Any language", row arrows, batched Drive sync.
 - Built 2026-10-03: Home page, TV episode tracking, custom titles, Markdown import/export, Drive sync options, search links, TMDB caching. "Now on your services" is an in-app Home row only (no notifications).
 - Built 2026-11-12 (v0.4.0): shared streaming info (`src/db/streaming.ts`: one checker, one store synced for library titles, poster logos), Library and Browse Streaming menus with ⟳ refresh, your watch link and notes on saved titles.
-- Built 2026-11-19 (v0.5.0): installed-app launch (`isInstalledPwa`; quiet Drive renewal `silentReconnect`; clipboard card `LaunchActions`, always asks before searching) and "Skip AI for now". The webapp://watch.mangoidiots.com iPhone Shortcut launches the pinned app. Whether `prompt: 'none'` renews silently on real iPhone/Android is unverified.
+- Built 2026-11-19 (v0.5.0): installed-app launch (`isInstalledPwa`; quiet Drive renewal `silentReconnect`; clipboard card `LaunchActions`, always asks before searching; 0.5.2 paste box on iPhone/iPad) and "Skip AI for now". The webapp://watch.mangoidiots.com iPhone Shortcut launches the pinned app. Whether `prompt: 'none'` renews silently on real iPhone/Android is unverified.
 - Not built: image share cards, Tamil/Hindi UI, YouTube sync, more regions.
 
 ## Backlog (build only when the owner asks)

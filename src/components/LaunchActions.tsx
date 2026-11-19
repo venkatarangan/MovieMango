@@ -1,5 +1,5 @@
 import ContentPasteSearchRoundedIcon from '@mui/icons-material/ContentPasteSearchRounded';
-import { Box, Button, Paper, Typography } from '@mui/material';
+import { Box, Button, Paper, TextField, Typography } from '@mui/material';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { saveSettings, useSettings } from '../db/settings';
@@ -8,8 +8,11 @@ import { trackEvent } from '../lib/analytics';
 import { clipboardHash, clipboardQuery, readClipboardText, recentlyOffered } from '../lib/clipboard';
 import { isInstalledPwa } from '../lib/pwa';
 
-/** What the card offers: a known title (Android could read the clipboard) or a tap to read it (iPhone/iPad need one). */
-type Offer = { kind: 'text'; text: string } | { kind: 'tap' };
+/**
+ * What the card offers: a known title (Android could read the clipboard), or a box to paste into (iPhone and
+ * iPad don't let a web app read the clipboard, but they always allow the user's own paste into a text field).
+ */
+type Offer = { kind: 'text'; text: string } | { kind: 'paste' };
 
 /** Set once per app start, so a cold launch checks the clipboard once and resumes check again. */
 let checkedAtStart = false;
@@ -18,7 +21,8 @@ let checkedAtStart = false;
  * Installed app only. When the app opens or comes back to the front, offers to search for text found on the
  * clipboard. It never searches by itself and never interrupts: a small card with a button, which can be ignored.
  * Android Chrome lets us read the clipboard at launch (after a one-time permission), so the card shows the
- * text. iPhone and iPad only allow it right after a tap, so the card shows the button and reads on tap.
+ * text. iPhone and iPad refuse that, even after a tap, so the card shows a box: tap it, choose Paste, and the
+ * search starts. That is the user's own paste, so it needs no permission.
  */
 export default function LaunchActions() {
   const settings = useSettings();
@@ -42,9 +46,9 @@ export default function LaunchActions() {
       if (read.ok) {
         const text = clipboardQuery(read.text);
         if (text && !recentlyOffered(text, last.current)) setOffer({ kind: 'text', text });
-      } else if (read.reason === 'blocked') {
-        // iPhone/iPad: reading needs a tap. We don't know what's copied, so just offer the button.
-        setOffer((o) => o ?? { kind: 'tap' });
+      } else if (read.reason === 'blocked' || read.reason === 'unsupported') {
+        // iPhone/iPad (or Android with the permission refused): we can't look, so offer a box to paste into.
+        setOffer((o) => o ?? { kind: 'paste' });
       }
     } finally {
       busy.current = false;
@@ -73,23 +77,11 @@ export default function LaunchActions() {
     navigate(`/search?q=${encodeURIComponent(text)}`, { state: { paste: { text, at: Date.now() } } });
   };
 
-  // Called from the tap itself, which is what lets iPhone and iPad read the clipboard.
-  const onSearch = async () => {
-    if (offer?.kind === 'text') return go(offer.text);
-    const read = await readClipboardText();
-    const text = read.ok ? clipboardQuery(read.text) : null;
-    if (text) return go(text);
-    // Say what happened instead of opening an empty Search page with no explanation.
-    setOffer(null);
-    toast(
-      read.ok
-        ? 'What you copied doesn’t look like a title. Type it in the search box instead.'
-        : read.reason === 'empty'
-          ? 'Your clipboard is empty. Copy a title, then try again.'
-          : 'Your phone didn’t let MovieMango read the clipboard. Tap Paste when it appears, or paste into the search box.',
-      'info',
-    );
-    navigate('/search');
+  /** Text the user pasted (or typed and sent) into the card's box. */
+  const submit = (raw: string, typed = false) => {
+    const text = typed ? raw.trim() : clipboardQuery(raw);
+    if (text && text.length > 1) return go(text);
+    toast('That doesn’t look like a title. Copy just the title, then paste again.', 'info');
   };
 
   const dismiss = () => {
@@ -98,31 +90,65 @@ export default function LaunchActions() {
   };
 
   if (!active || !offer) return null;
+  const paste = offer.kind === 'paste';
   return (
     <Paper
       elevation={6}
       role="region"
       aria-label="Search what you copied"
-      sx={{ position: 'fixed', left: 12, right: 12, bottom: { xs: 88, md: 24 }, mx: 'auto', maxWidth: 480, zIndex: (t) => t.zIndex.snackbar, p: 1.5, borderRadius: '16px' }}
+      sx={{
+        position: 'fixed',
+        left: 12,
+        right: 12,
+        // The paste box sits at the top so the phone's keyboard doesn't cover it.
+        ...(paste ? { top: 'calc(env(safe-area-inset-top) + 68px)' } : { bottom: { xs: 88, md: 24 } }),
+        mx: 'auto',
+        maxWidth: 480,
+        zIndex: (t) => t.zIndex.snackbar,
+        p: 1.5,
+        borderRadius: '16px',
+      }}
     >
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
         <ContentPasteSearchRoundedIcon color="primary" sx={{ mt: 0.25 }} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="body2" sx={{ fontWeight: 600, overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-            {offer.kind === 'text' ? `Search for “${offer.text}”?` : 'Search what you copied?'}
+            {paste ? 'Search what you copied?' : `Search for “${offer.text}”?`}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.3 }}>
-            {offer.kind === 'text' ? 'Found on your clipboard. Only used for this search.' : 'Tap, then allow Paste. Only used for this search.'}
+            {paste ? 'Your phone doesn’t let apps look at the clipboard. Tap the box, choose Paste, and the search starts.' : 'Found on your clipboard. Only used for this search.'}
           </Typography>
         </Box>
       </Box>
+      {paste && (
+        <TextField
+          fullWidth
+          size="small"
+          autoComplete="off"
+          placeholder="Tap here, then Paste"
+          sx={{ mt: 1 }}
+          onPaste={(e) => {
+            e.preventDefault();
+            submit(e.clipboardData.getData('text'));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submit((e.target as HTMLInputElement).value, true);
+            }
+          }}
+          slotProps={{ htmlInput: { 'aria-label': 'Paste the title you copied', enterKeyHint: 'search' } }}
+        />
+      )}
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1 }}>
         <Button size="small" color="inherit" onClick={dismiss}>
           Not now
         </Button>
-        <Button size="small" variant="contained" onClick={onSearch}>
-          Search the clipboard text
-        </Button>
+        {!paste && (
+          <Button size="small" variant="contained" onClick={() => go(offer.text)}>
+            Search the clipboard text
+          </Button>
+        )}
       </Box>
     </Paper>
   );

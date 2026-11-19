@@ -31,7 +31,7 @@ export default function Privacy() {
 
       <Typography variant="h6" component="h2">The clipboard</Typography>
       <Typography>
-        In the installed app (not in a browser tab), MovieMango can look at your clipboard when it opens, and offers to search for it if it looks like a movie or TV title. It only searches when you tap “Search the clipboard text”. The text is used for that one TMDB search and is never saved (only a short fingerprint, so the same text isn’t offered twice in a row) or sent to analytics. Links, emails and long keys or passwords are ignored. Turn it off in Settings → When the app opens. iPhone and iPad show their own “Paste” button first.
+        In the installed app (not in a browser tab), MovieMango can look at your clipboard when it opens, and offers to search for it if it looks like a movie or TV title. It only searches when you tap “Search the clipboard text”. The text is used for that one TMDB search and is never saved (only a short fingerprint, so the same text isn’t offered twice in a row) or sent to analytics. Links, emails and long keys or passwords are ignored. Turn it off in Settings → When the app opens. iPhone and iPad don’t let apps look at the clipboard, so there MovieMango shows a box instead: you tap it, choose Paste, and the search starts.
       </Typography>
 
       <Typography variant="h6" component="h2">Staying signed in to Google Drive</Typography>

@@ -3,8 +3,11 @@ import { mockApis, mockGoogle, seedOnboarded, title } from './fixtures';
 
 const shot = (name: string, project: string) => `test-results/screens/${project}-${name}.png`;
 
-/** Makes the page look like an installed app, with a clipboard that answers the way each platform does. */
-async function installedApp(page: Page, clipboard: { android?: string; ios?: string }) {
+/**
+ * Makes the page look like an installed app. Android Chrome answers a clipboard read with `android`;
+ * with nothing given it behaves like iPhone/iPad, which refuse the read (even after a tap, as seen on a real iPhone).
+ */
+async function installedApp(page: Page, clipboard: { android?: string }) {
   await page.addInitScript((cb) => {
     const orig = window.matchMedia.bind(window);
     window.matchMedia = (q: string) => {
@@ -12,16 +15,12 @@ async function installedApp(page: Page, clipboard: { android?: string; ios?: str
       if (q.includes('display-mode: standalone')) Object.defineProperty(mql, 'matches', { value: true });
       return mql;
     };
-    let calls = 0;
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {
-        // Android Chrome answers at launch. iPhone/iPad refuse until the user has tapped (the second read here).
         readText: async () => {
-          calls++;
           if (cb.android !== undefined) return cb.android;
-          if (calls === 1) throw new DOMException('Needs a user gesture', 'NotAllowedError');
-          return cb.ios ?? '';
+          throw new DOMException('Not allowed', 'NotAllowedError');
         },
       },
     });
@@ -104,13 +103,25 @@ test('Installed app: if Google needs a tap, the Reconnect chip stays and nothing
   await expect.poll(() => drive.uploads).toBe(1);
 });
 
-test('Installed app on iPhone/iPad: the card asks, and the tap does the read', async ({ page }) => {
+/** What Safari does when the user chooses Paste in a text box. */
+const paste = (page: Page, label: string, text: string) =>
+  page.getByRole('textbox', { name: label }).evaluate((el, t) => {
+    const data = new DataTransfer();
+    data.setData('text/plain', t);
+    el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  }, text);
+
+test('Installed app on iPhone/iPad: the card offers a box, and pasting into it starts the search', async ({ page }, info) => {
   await mockApis(page);
-  await installedApp(page, { ios: FILM });
+  await installedApp(page, {});
   await seedOnboarded(page);
   await expect(page.getByText('Search what you copied?')).toBeVisible();
-  await page.getByRole('button', { name: 'Search the clipboard text' }).click();
+  await expect(page.getByRole('button', { name: 'Search the clipboard text' })).toHaveCount(0);
+  await page.screenshot({ path: shot('23-paste-box', info.project.name) });
+  await paste(page, 'Paste the title you copied', `${FILM} (2019)\nhttps://www.imdb.com/title/tt0000103/`);
   await expect(page.getByRole('textbox', { name: 'Search movies and TV shows' })).toHaveValue(FILM);
+  await expect(page.getByText(`Results for “${FILM}”`)).toBeVisible();
+  await expect(page.getByText('Search what you copied?')).toHaveCount(0);
 });
 
 test('Browser tab, or switched off in Settings: no quiet reconnect and no clipboard card', async ({ page }) => {
@@ -153,11 +164,12 @@ test('Clipboard card while already on Search: the pasted title replaces what was
   await expect(page).toHaveURL(/q=Madras/);
 });
 
-test('iPhone/iPad: if the copied text is not a title, the tap says so instead of opening an empty page', async ({ page }) => {
+test('iPhone/iPad: pasting something that is not a title says so and keeps the box', async ({ page }) => {
   await mockApis(page);
-  await installedApp(page, { ios: 'https://example.com/some/page' });
+  await installedApp(page, {});
   await seedOnboarded(page);
-  await page.getByRole('button', { name: 'Search the clipboard text' }).click();
+  await paste(page, 'Paste the title you copied', 'https://example.com/some/page');
   await expect(page.getByText(/doesn’t look like a title/)).toBeVisible();
-  await expect(page).toHaveURL(/#\/search$/);
+  await expect(page.getByRole('textbox', { name: 'Paste the title you copied' })).toBeVisible();
+  await expect(page).not.toHaveURL(/search/);
 });

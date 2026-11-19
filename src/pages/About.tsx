@@ -78,7 +78,7 @@ export default function About() {
         <li><b>Your own titles</b>: add films and shows that aren’t on TMDB, like old serials or home videos.</li>
         <li><b>Import and export</b>: bring lists in from Markdown, IMDb or Letterboxd, and take them out as Markdown any time.</li>
         <li><b>Sync</b>: back up to your own Google Drive and use it on your phone and computer.</li>
-        <li><b>Install it</b>: add MovieMango to your home screen (Share → Add to Home Screen on iPhone and iPad, Install app on Android). When it opens, it quietly renews your Drive sign-in, and if you’ve just copied a title it offers to search for it. Both are optional, in Settings.</li>
+        <li><b>Install it</b>: add MovieMango to your home screen (Share → Add to Home Screen on iPhone and iPad, Install app on Android). When it opens, it quietly renews your Drive sign-in, and if you’ve just copied a title it offers to search for it (on iPhone and iPad you tap a box and choose Paste). Both are optional, in Settings.</li>
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
         The AI runs on your device where possible (Gemini Nano in Chrome, or Qwen), or uses your own Google AI key. AI is optional: you can skip it during setup and MovieMango still picks from your services using your taste, time and mood, just without the written “why”. Add AI any time in Settings.
