@@ -9,10 +9,8 @@ playwright-report
 __pycache__
 .vite
 *.tsbuildinfo
-backup.bat
 .claude/worktrees/
 temp/
 tmp/
-backup.ps1
 drafts/
 templocal/
