@@ -29,6 +29,16 @@ export default function Privacy() {
         </ul>
       </Typography>
 
+      <Typography variant="h6" component="h2">The clipboard</Typography>
+      <Typography>
+        In the installed app (not in a browser tab), MovieMango can look at your clipboard when it opens, and offers to search for it if it looks like a movie or TV title. It only searches when you tap “Search the clipboard text”. The text is used for that one TMDB search and is never saved (only a short fingerprint, so the same text isn’t offered twice in a row) or sent to analytics. Links, emails and long keys or passwords are ignored. Turn it off in Settings → When the app opens. iPhone and iPad show their own “Paste” button first.
+      </Typography>
+
+      <Typography variant="h6" component="h2">Staying signed in to Google Drive</Typography>
+      <Typography>
+        Google sign-ins last about an hour. In the installed app, MovieMango keeps that short-lived sign-in on your device until it expires, and quietly asks Google for a new one when the app opens (turn this off in Settings → When the app opens). It can only reach MovieMango’s own folder in your Drive.
+      </Typography>
+
       <Typography variant="h6" component="h2">On-device AI</Typography>
       <Typography>Gemini Nano (Chrome) and Qwen (WebGPU) run entirely on your device. Nothing you type is sent anywhere.</Typography>
 

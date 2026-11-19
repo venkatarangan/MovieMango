@@ -11,7 +11,6 @@ import { Link as RouterLink } from 'react-router';
 import { ENGINE_LABELS } from '../ai/types';
 import { ChipGroup } from '../components/ChipGroup';
 import { EmptyState, ErrorNote } from '../components/common';
-import EngineCard from '../components/EngineCard';
 import { useEngine } from '../components/EngineContext';
 import { MangoBadge } from '../components/Mango';
 import { Poster } from '../components/PosterCard';
@@ -170,7 +169,7 @@ export default function Tonight() {
         </Box>
         <Chip
           icon={<AutoAwesomeRoundedIcon />}
-          label={choice?.id ? ENGINE_LABELS[choice.id] : 'AI not set up'}
+          label={choice?.id ? ENGINE_LABELS[choice.id] : 'No AI · Basic picks'}
           onClick={(e) => setEngineAnchor(e.currentTarget)}
           variant="outlined"
           sx={{ mt: 1 }}
@@ -194,12 +193,18 @@ export default function Tonight() {
       </Box>
 
       {noAi && (
-        <Box sx={{ mt: 2 }}>
-          <EngineCard showChooser={false} />
-          <Button size="small" sx={{ mt: 1 }} color="inherit" onClick={() => saveSettings({ aiEngine: 'basic' })}>
-            Use Basic mode (no AI) for now
-          </Button>
-        </Box>
+        <Alert
+          severity="info"
+          sx={{ mt: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => saveSettings({ aiEngine: 'basic' })}>
+              Use Basic mode
+            </Button>
+          }
+        >
+          AI isn’t set up on this device, so picks use Basic mode (your taste, time and mood, without the written “why”). You can pick now, and{' '}
+          <RouterLink to="/settings" style={{ color: 'inherit' }}>add AI in Settings</RouterLink> any time.
+        </Alert>
       )}
 
       <Card variant="outlined" sx={{ mt: 2.5, borderRadius: '20px' }}>

@@ -20,7 +20,9 @@ import { APP_VERSION, BUILD_ID, SOURCE_URL } from '../lib/appInfo';
 import { createBackup, restoreBackup } from '../lib/backup';
 import { LANGUAGES } from '../lib/languages';
 import { SERVICES } from '../lib/providers';
+import { isInstalledPwa } from '../lib/pwa';
 import { downloadText } from '../lib/share';
+import { driveConfigured } from '../sync/google';
 
 function Section({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
   return (
@@ -136,6 +138,28 @@ export default function SettingsPage() {
 
         <Section title="Google Drive backup and sync">
           <DriveCard />
+        </Section>
+
+        <Section title="When the app opens">
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {isInstalledPwa()
+              ? 'You’re using MovieMango as an installed app, so these two shortcuts are on.'
+              : 'These work only in the installed app (Add to Home Screen on iPhone and iPad, Install app on Android), not in a browser tab.'}
+          </Typography>
+          {driveConfigured() && (
+            <Toggle
+              checked={settings.driveAutoReconnect}
+              onChange={(v) => saveSettings({ driveAutoReconnect: v })}
+              label="Reconnect Google Drive automatically"
+              help="Google sign-ins last about an hour. When the app opens, MovieMango quietly asks Google for a new one. If Google needs a tap, you’ll see “Reconnect Drive” instead and nothing gets in your way."
+            />
+          )}
+          <Toggle
+            checked={settings.launchClipboardSearch}
+            onChange={(v) => saveSettings({ launchClipboardSearch: v })}
+            label="Offer to search what I copied"
+            help="When the app opens, if you’ve copied something that looks like a title, a small card asks “Search the clipboard text”. It only searches when you tap it, the text goes to TMDB as a normal search and is never stored. iPhone and iPad make you tap before MovieMango can look."
+          />
         </Section>
 
         <Section title="Your data">

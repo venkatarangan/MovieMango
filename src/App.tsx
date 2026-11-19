@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy, Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router';
 import { EngineProvider } from './components/EngineContext';
+import LaunchActions from './components/LaunchActions';
 import Layout from './components/Layout';
 import { StreamingProvider } from './components/Streaming';
 import { ItemsProvider } from './components/TitleActions';
@@ -70,6 +71,7 @@ export default function App() {
             <EngineProvider>
               <HashRouter>
                 <PageTracker />
+                <LaunchActions />
                 {!settings ? (
                   <Box sx={{ display: 'grid', placeItems: 'center', minHeight: '100vh' }}>
                     <CircularProgress />

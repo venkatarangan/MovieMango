@@ -36,7 +36,9 @@ I love movies, and not just Indian and Hollywood ones; some of my favourites com
 2. Sign in with Google (optional, for backup and sync).
 3. Get a free TMDB key. The app shows you how, step by step.
 4. Pick your languages and services, and tap 10 titles you love.
-5. Choose an AI: Gemini Nano (built into desktop Chrome), Qwen (runs on your device), your own free Google AI key, or no AI.
+5. Choose an AI: Gemini Nano (built into desktop Chrome), Qwen (runs on your device), your own free Google AI key, or no AI (you can skip this step and add AI later).
+
+Installed as an app (Add to Home Screen on iPhone/iPad, Install app on Android), MovieMango also quietly renews your Google Drive sign-in when it opens, and offers to search for a title you just copied.
 
 ## Privacy
 

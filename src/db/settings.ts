@@ -27,6 +27,13 @@ export interface Settings {
   driveAutoSync: boolean;
   /** Keep the TMDB and Gemini keys in the Drive file so other devices pick them up. Per device. */
   driveSyncKeys: boolean;
+  /** Installed app only: quietly renew the Google sign-in when the app opens. Per device. */
+  driveAutoReconnect: boolean;
+  /** Installed app only: offer to search for title text found on the clipboard when the app opens. Per device. */
+  launchClipboardSearch: boolean;
+  /** Hash (never the text) and time of the last clipboard text we offered, so it isn't offered again at once. Per device. */
+  clipboardHash: string;
+  clipboardAt: number;
   lastSyncAt: number;
   /** When a synced setting last changed, for newest-wins merging across devices. */
   settingsUpdatedAt: number;
@@ -52,6 +59,10 @@ export const DEFAULT_SETTINGS: Settings = {
   driveEmail: '',
   driveAutoSync: true,
   driveSyncKeys: true,
+  driveAutoReconnect: true,
+  launchClipboardSearch: true,
+  clipboardHash: '',
+  clipboardAt: 0,
   lastSyncAt: 0,
   settingsUpdatedAt: 0,
 };

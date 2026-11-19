@@ -17,13 +17,33 @@ export async function listGeminiModels(key: string): Promise<{ id: string; label
     .map((m) => ({ id: m.name.replace(/^models\//, ''), label: m.displayName ?? m.name }));
 }
 
-export async function validateGeminiKey(key: string): Promise<boolean> {
+export class GeminiTimeoutError extends Error {
+  constructor() {
+    super('Google took too long to answer.');
+  }
+}
+
+/** How long we wait for Google to check a key before suggesting the user skip AI for now. */
+export const GEMINI_CHECK_TIMEOUT_MS = 12_000;
+
+/** True/false for a good/bad key. Throws GeminiTimeoutError when Google is slow, or another error when it can't be reached. */
+export async function validateGeminiKey(key: string, timeoutMs = GEMINI_CHECK_TIMEOUT_MS): Promise<boolean> {
+  const ctl = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      ctl.abort();
+      reject(new GeminiTimeoutError());
+    }, timeoutMs);
+  });
   try {
-    await listGeminiModels(key.trim());
+    await Promise.race([getJson<unknown>(`${BASE}/models?pageSize=1`, { headers: { 'x-goog-api-key': key.trim() }, signal: ctl.signal }), timeout]);
     return true;
   } catch (e) {
     if (e instanceof HttpError && (e.status === 400 || e.status === 401 || e.status === 403)) return false;
     throw e;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

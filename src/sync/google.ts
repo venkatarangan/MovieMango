@@ -2,8 +2,12 @@
  * Google Identity Services (GIS) token flow, entirely in the browser. We ask only for:
  *  - drive.appdata: a hidden, app-private folder in the user's own Drive (MovieMango can't see any other file)
  *  - openid + email: to show which account is connected
- * Access tokens last about an hour. A new one needs a popup, so it must start from a user action.
+ * Access tokens last about an hour. A new one normally needs a popup, so it must start from a user action;
+ * the installed app first tries a quiet renewal (`silent`) and, if Google or the browser says no, leaves the
+ * sign-in to a button the user taps when they want it.
  */
+import { isInstalledPwa } from '../lib/pwa';
+
 export const CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? '';
 export const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.appdata openid email';
 
@@ -65,11 +69,26 @@ export interface AccessToken {
 
 const STORE = 'mm.driveToken';
 
-/** Keeps the short-lived token for this tab only, so a reload within the hour doesn't need another popup. */
+/**
+ * Keeps the short-lived token (about an hour, and only for MovieMango's own Drive folder) so a reload or
+ * a quick reopen doesn't need another sign-in. In a browser tab it lives in this tab only; in the
+ * installed app it also survives the app being closed, until it expires.
+ */
 export function storedToken(): AccessToken | null {
+  for (const area of [safeStorage('session'), safeStorage('local')]) {
+    try {
+      const t = JSON.parse(area?.getItem(STORE) ?? 'null') as AccessToken | null;
+      if (t && t.expiresAt > Date.now() + 60_000) return t;
+    } catch {
+      /* unreadable: ignore */
+    }
+  }
+  return null;
+}
+
+function safeStorage(kind: 'session' | 'local'): Storage | null {
   try {
-    const t = JSON.parse(sessionStorage.getItem(STORE) ?? 'null') as AccessToken | null;
-    return t && t.expiresAt > Date.now() + 60_000 ? t : null;
+    return kind === 'session' ? sessionStorage : localStorage;
   } catch {
     return null;
   }
@@ -77,8 +96,11 @@ export function storedToken(): AccessToken | null {
 
 function storeToken(t: AccessToken | null) {
   try {
-    if (t) sessionStorage.setItem(STORE, JSON.stringify(t));
-    else sessionStorage.removeItem(STORE);
+    const session = safeStorage('session');
+    const local = safeStorage('local');
+    session?.removeItem(STORE);
+    local?.removeItem(STORE);
+    if (t) (isInstalledPwa() ? local : session)?.setItem(STORE, JSON.stringify(t));
   } catch {
     /* storage unavailable */
   }
@@ -97,11 +119,21 @@ export class GoogleAuthError extends Error {
  * Opens Google's sign-in/consent popup. Call it from a click handler.
  * `fresh` shows the account chooser (first connect); otherwise Google reuses the earlier consent.
  */
-export async function requestToken(opts: { fresh?: boolean; hint?: string } = {}): Promise<AccessToken> {
+const SILENT_TIMEOUT_MS = 8_000;
+
+export async function requestToken(opts: { fresh?: boolean; hint?: string; silent?: boolean } = {}): Promise<AccessToken> {
   if (!CLIENT_ID) throw new GoogleAuthError('Google Drive isn’t configured in this build.');
   await loadGis();
   const oauth2 = window.google!.accounts!.oauth2!;
   return new Promise<AccessToken>((resolve, reject) => {
+    // A quiet attempt must never leave the user waiting or looking at a Google window: give up after a few seconds.
+    const quiet = opts.silent ? setTimeout(() => reject(new GoogleAuthError('Google needs you to sign in again.', 'cancelled')), SILENT_TIMEOUT_MS) : undefined;
+    const done = <T,>(fn: (v: T) => void) => (v: T) => {
+      clearTimeout(quiet);
+      fn(v);
+    };
+    resolve = done(resolve);
+    reject = done(reject);
     const client = oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: DRIVE_SCOPES,
@@ -124,7 +156,7 @@ export async function requestToken(opts: { fresh?: boolean; hint?: string } = {}
           ),
         ),
     });
-    client.requestAccessToken({ prompt: opts.fresh ? 'select_account' : '', login_hint: opts.hint || undefined });
+    client.requestAccessToken({ prompt: opts.silent ? 'none' : opts.fresh ? 'select_account' : '', login_hint: opts.hint || undefined });
   });
 }
 

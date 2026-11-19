@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 (2026-11-19)
+
+- Skip AI: setup now has a clear "Skip AI for now" (Basic mode), and a slow Google check for a Gemini key times out after 12 seconds and offers to skip. Tonight works without AI and shows one line instead of a setup card.
+- Installed app (Add to Home Screen on iPhone/iPad, Install app on Android): when it opens, MovieMango quietly asks Google for a new Drive sign-in, so you don't have to press "Reconnect Drive". If Google needs a tap, nothing interrupts; the Reconnect chip stays. The sign-in is kept on the device until its hour is up.
+- Installed app: if you copied something that looks like a title, a small card offers "Search the clipboard text". It only searches when you tap it; iPhone and iPad ask for a tap before the clipboard can be read. Links, emails and long keys are ignored; the text is never stored or sent to analytics.
+- About page: new "Install it" note, and says AI is optional.
+- Settings → When the app opens: switches for both. Privacy page and Settings text explain the clipboard and the stored sign-in.
+
 ## 0.4.4 (2026-11-13)
 
 - Link previews: sharing watch.mangoidiots.com on WhatsApp, Facebook, X, LinkedIn, Telegram and similar apps now shows a picture, title and description (Open Graph and Twitter card tags, 42 KB share image). The privacy page has its own preview.

@@ -169,11 +169,12 @@ export default function Welcome() {
   if (!settings) return null;
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  const finish = async () => {
+  const finish = async (skipAi = false) => {
     setSaving(true);
     for (const t of picked.values()) await setRating(snapshotFromList(t, t.type), 'love');
-    await saveSettings({ onboarded: true });
-    trackEvent('onboarding_done', { loved: picked.size, languages: langs.length });
+    // Skipping AI picks Basic mode now; the user can switch to an AI engine whenever they like.
+    await saveSettings({ onboarded: true, ...(skipAi ? { aiEngine: 'basic' as const } : {}) });
+    trackEvent('onboarding_done', { loved: picked.size, languages: langs.length, skipped_ai: skipAi });
     navigate('/tonight', { replace: true });
   };
 
@@ -332,12 +333,20 @@ export default function Welcome() {
               Meet your AI movie buff
             </Typography>
             <Typography color="text.secondary" sx={{ mt: 1, mb: 2 }}>
-              AI turns your mood, your time and your taste into picks, and explains each one. Use whichever engine works on this device; you can change it any time in Settings.
+              AI turns your mood, your time and your taste into picks, and explains each one. It’s optional: use whichever engine works on this device, or skip it and use Basic mode. You can change this any time in Settings.
             </Typography>
-            <EngineCard />
-            <Button variant="contained" size="large" sx={{ mt: 4 }} onClick={finish} disabled={saving}>
-              {saving ? 'Saving…' : 'Show me tonight’s picks'}
-            </Button>
+            <Alert severity="info" sx={{ mb: 2 }} action={<Button color="inherit" size="small" onClick={() => finish(true)} disabled={saving}>Skip AI</Button>}>
+              Setup slow, or just want to look around? Skip AI now. Basic mode still picks from what’s on your services, using your taste, time and mood; it just doesn’t write the “why”.
+            </Alert>
+            <EngineCard onSkip={() => finish(true)} />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 4 }}>
+              <Button variant="contained" size="large" onClick={() => finish()} disabled={saving}>
+                {saving ? 'Saving…' : 'Show me tonight’s picks'}
+              </Button>
+              <Button size="large" color="inherit" onClick={() => finish(true)} disabled={saving}>
+                Skip AI for now
+              </Button>
+            </Stack>
           </Box>
         )}
 

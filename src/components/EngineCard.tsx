@@ -8,7 +8,7 @@ import { useEngine } from './EngineContext';
 import { GeminiKeyForm } from './KeyForms';
 
 /** Shows which AI engine is in use, and lets the user enable or switch engines. */
-export default function EngineCard({ showChooser = true }: { showChooser?: boolean }) {
+export default function EngineCard({ showChooser = true, onSkip }: { showChooser?: boolean; onSkip?: () => void }) {
   const settings = useSettings();
   const { status, choice, progress, busy, error, enableNano, enableQwen } = useEngine();
   const [showKey, setShowKey] = useState(false);
@@ -112,12 +112,12 @@ export default function EngineCard({ showChooser = true }: { showChooser?: boole
         {error && <Alert severity="error" sx={{ mt: 1.5 }}>{error}</Alert>}
         {!choice.id && choice.message && settings.aiEngine !== 'basic' && (
           <Alert severity="info" sx={{ mt: 1.5 }}>
-            {choice.message} Add a Google AI Studio key, download Qwen, or switch to Basic mode.
+            {choice.message} Add a Google AI Studio key, download Qwen, or switch to Basic mode. MovieMango works well without AI.
           </Alert>
         )}
         <Collapse in={showKey} unmountOnExit>
           <Box sx={{ mt: 2 }}>
-            <GeminiKeyForm onSaved={() => setShowKey(false)} />
+            <GeminiKeyForm onSaved={() => setShowKey(false)} onSkip={onSkip} />
           </Box>
         </Collapse>
         {showChooser && (

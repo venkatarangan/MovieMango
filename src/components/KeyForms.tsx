@@ -4,7 +4,7 @@ import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded';
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded';
 import { Alert, Box, Button, CircularProgress, IconButton, InputAdornment, Link, TextField, Typography } from '@mui/material';
 import { useState } from 'react';
-import { validateGeminiKey } from '../ai/gemini';
+import { GeminiTimeoutError, validateGeminiKey } from '../ai/gemini';
 import { validateTmdbToken } from '../api/tmdb';
 import { saveSettings, useSettings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
@@ -136,10 +136,10 @@ export function TmdbKeyForm({ onSaved, compact }: { onSaved?: () => void; compac
   );
 }
 
-export function GeminiKeyForm({ onSaved }: { onSaved?: () => void }) {
+export function GeminiKeyForm({ onSaved, onSkip }: { onSaved?: () => void; onSkip?: () => void }) {
   const settings = useSettings();
   const [value, setValue] = useState('');
-  const [state, setState] = useState<'idle' | 'checking' | 'bad' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'checking' | 'bad' | 'error' | 'slow'>('idle');
 
   const save = async () => {
     setState('checking');
@@ -150,8 +150,8 @@ export function GeminiKeyForm({ onSaved }: { onSaved?: () => void }) {
       setValue('');
       setState('idle');
       onSaved?.();
-    } catch {
-      setState('error');
+    } catch (e) {
+      setState(e instanceof GeminiTimeoutError ? 'slow' : 'error');
     }
   };
 
@@ -191,6 +191,11 @@ export function GeminiKeyForm({ onSaved }: { onSaved?: () => void }) {
       </Box>
       {state === 'bad' && <Alert severity="error" sx={{ mt: 1.5 }}>Google didn’t accept that key.</Alert>}
       {state === 'error' && <Alert severity="warning" sx={{ mt: 1.5 }}>Couldn’t reach Google. Check your connection and try again.</Alert>}
+      {state === 'slow' && (
+        <Alert severity="info" sx={{ mt: 1.5 }} action={onSkip ? <Button color="inherit" size="small" onClick={onSkip}>Skip AI for now</Button> : undefined}>
+          Google is taking a while to answer. You can try again, or carry on without AI (Basic mode) and add the key later in Settings. Nothing is lost.
+        </Alert>
+      )}
     </Box>
   );
 }

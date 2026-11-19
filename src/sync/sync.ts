@@ -5,6 +5,7 @@ import { trackEvent } from '../lib/analytics';
 import { DriveError, downloadJson, findSyncFile, getFileMeta, uploadJson } from './drive';
 import { driveConfigured, fetchEmail, forgetToken, GoogleAuthError, requestToken, revokeToken, storedToken, type AccessToken } from './google';
 import { onLibraryStreamingChanged } from '../db/streaming';
+import { isInstalledPwa } from '../lib/pwa';
 import { libraryStreaming, mergePayloads, pickSynced, sameContent, type SyncPayload } from './merge';
 
 export type SyncStatus = 'off' | 'idle' | 'pending' | 'syncing' | 'needs-auth' | 'error';
@@ -193,6 +194,34 @@ export async function reconnectDrive() {
   await syncNow();
 }
 
+/** After a failed quiet renewal, wait this long before trying again (e.g. on the next app resume). */
+const SILENT_RETRY_MS = 5 * 60_000;
+let lastSilentAt = 0;
+
+/**
+ * Installed app only: when the hour-long token has lapsed, try to renew it without any screen, so the user
+ * never has to press "Reconnect". It never interrupts: if Google or the browser needs a tap, the
+ * "Reconnect Drive" chip stays and the user signs in when they choose to. Returns true if signed in.
+ */
+export async function silentReconnect(): Promise<boolean> {
+  if (!driveConfigured() || !isInstalledPwa() || state.status === 'off') return false;
+  const s = await getSettings();
+  if (!s.driveConnected || !s.driveAutoReconnect) return false;
+  if (validToken()) return true;
+  if (Date.now() - lastSilentAt < SILENT_RETRY_MS) return false;
+  lastSilentAt = Date.now();
+  try {
+    token = await requestToken({ silent: true, hint: s.driveEmail });
+  } catch {
+    trackEvent('drive_silent_reconnect', { ok: false });
+    set({ status: 'needs-auth' });
+    return false;
+  }
+  trackEvent('drive_silent_reconnect', { ok: true });
+  await syncNow();
+  return true;
+}
+
 export async function disconnectDrive() {
   await revokeToken(token?.token ?? storedToken()?.token);
   token = null;
@@ -227,10 +256,12 @@ export async function startSync() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') flush();
     // Back after a while: pick up changes made on other devices.
+    else if (state.status === 'needs-auth') void silentReconnect();
     else if (Date.now() - state.lastSyncAt > REFRESH_AFTER_MS && validToken()) whenAuto(() => void syncNow());
   });
   window.addEventListener('pagehide', flush);
   if (s.driveConnected && s.driveAutoSync && validToken()) void syncNow();
+  else if (s.driveConnected) void silentReconnect();
 }
 
 /** Called after onboarding/connect so the status reflects the new connection. */

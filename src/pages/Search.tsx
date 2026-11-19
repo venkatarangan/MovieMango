@@ -3,7 +3,7 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
 import { Box, Button, CircularProgress, InputAdornment, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { mediaTypeOf, searchMulti, snapshotFromList, trending } from '../api/tmdb';
 import { EmptyState, ErrorNote, SectionTitle } from '../components/common';
 import CustomTitleDialog from '../components/CustomTitleDialog';
@@ -26,6 +26,11 @@ export default function Search() {
   const query = useDebounced(text.trim(), 350);
   const [adding, setAdding] = useState(false);
   const navigate = useNavigate();
+  // "Search the clipboard text" while already on this page: put the copied text in the box.
+  const paste = (useLocation().state as { paste?: { text: string; at: number } } | null)?.paste;
+  useEffect(() => {
+    if (paste) setText(paste.text);
+  }, [paste?.at]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setParams(query ? { q: query } : {}, { replace: true });

@@ -189,20 +189,27 @@ export async function mockApis(page: Page) {
 }
 
 /** Fake Google sign-in (GIS) and a fake Drive appDataFolder holding at most one file. */
-export async function mockGoogle(page: Page, existing: unknown = null) {
-  await page.addInitScript(() => {
-    (window as unknown as { google: unknown }).google = {
+export async function mockGoogle(page: Page, existing: unknown = null, opts: { silent?: 'ok' | 'fail' } = {}) {
+  await page.addInitScript((silent) => {
+    const w = window as unknown as { __gisPrompts: string[]; google: unknown };
+    w.__gisPrompts = [];
+    w.google = {
       accounts: {
         oauth2: {
-          initTokenClient: (cfg: { callback: (r: object) => void }) => ({
-            requestAccessToken: () => setTimeout(() => cfg.callback({ access_token: 'test-token', expires_in: 3600 }), 50),
+          initTokenClient: (cfg: { callback: (r: object) => void; error_callback?: (e: object) => void }) => ({
+            requestAccessToken: (o?: { prompt?: string }) => {
+              w.__gisPrompts.push(o?.prompt ?? '');
+              // A quiet (prompt "none") request that Google or the browser refuses, like a blocked popup.
+              if (o?.prompt === 'none' && silent === 'fail') return setTimeout(() => cfg.error_callback?.({ type: 'popup_failed_to_open' }), 20);
+              setTimeout(() => cfg.callback({ access_token: 'test-token', expires_in: 3600 }), 50);
+            },
           }),
           hasGrantedAllScopes: () => true,
           revoke: () => {},
         },
       },
     };
-  });
+  }, opts.silent ?? 'ok');
   // Counts each kind of Drive call, so tests can check batching and skipped downloads.
   const drive = { file: existing as unknown, modifiedTime: '2026-01-01T00:00:00.000Z', uploads: 0, downloads: 0, metas: 0, lists: 0 };
   await page.route('https://www.googleapis.com/oauth2/v3/userinfo', (route) => route.fulfill({ json: { email: 'tester@example.com' } }));
