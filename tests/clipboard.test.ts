@@ -11,6 +11,16 @@ describe('clipboard text → search', () => {
     expect(clipboardQuery('Se7en')).toBe('Se7en');
   });
 
+  it('cleans shared snippets down to the title', () => {
+    expect(clipboardQuery('Dune\nhttps://www.imdb.com/title/tt15239678/')).toBe('Dune');
+    expect(clipboardQuery('https://www.imdb.com/title/tt15239678/\nDune')).toBe('Dune');
+    expect(clipboardQuery('Dune: Part Two (2024)')).toBe('Dune: Part Two');
+    expect(clipboardQuery('Dune - IMDb')).toBe('Dune');
+    expect(clipboardQuery('“Dune”')).toBe('Dune');
+    expect(clipboardQuery('RRR\n\nTelugu, 2022')).toBe('RRR');
+    expect(clipboardQuery('Watch Dune https://netflix.com/title/1')).toBe('Watch Dune');
+  });
+
   it('ignores empty, tiny and long text', () => {
     expect(clipboardQuery('')).toBeNull();
     expect(clipboardQuery(null)).toBeNull();

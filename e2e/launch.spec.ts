@@ -126,3 +126,38 @@ test('Browser tab, or switched off in Settings: no quiet reconnect and no clipbo
   await expect(page.getByRole('heading', { name: 'When the app opens' })).toBeVisible();
   await expect(page.getByLabel('Offer to search what I copied')).toBeChecked();
 });
+
+test('Clipboard card: a shared "title + link" searches the title only', async ({ page }) => {
+  await mockApis(page);
+  await installedApp(page, { android: `${FILM} (2019)\nhttps://www.imdb.com/title/tt0000103/` });
+  await seedOnboarded(page);
+  await expect(page.getByText(`Search for “${FILM}”?`)).toBeVisible();
+  await page.getByRole('button', { name: 'Search the clipboard text' }).click();
+  await expect(page).toHaveURL(new RegExp(`#/search\\?q=${encodeURIComponent(FILM).replace(/%20/g, '(%20|\\+)')}$`));
+  await expect(page.getByRole('textbox', { name: 'Search movies and TV shows' })).toHaveValue(FILM);
+  await expect(page.getByText(`Results for “${FILM}”`)).toBeVisible();
+});
+
+test('Clipboard card while already on Search: the pasted title replaces what was typed and is searched', async ({ page }) => {
+  await mockApis(page);
+  await installedApp(page, { android: FILM });
+  await seedOnboarded(page);
+  await page.goto('/#/search?q=Starfall');
+  const box = page.getByRole('textbox', { name: 'Search movies and TV shows' });
+  await expect(page.getByText('Results for “Starfall”')).toBeVisible();
+  await page.reload();
+  await expect(page.getByText(`Search for “${FILM}”?`)).toBeVisible();
+  await page.getByRole('button', { name: 'Search the clipboard text' }).click();
+  await expect(box).toHaveValue(FILM);
+  await expect(page.getByText(`Results for “${FILM}”`)).toBeVisible();
+  await expect(page).toHaveURL(/q=Madras/);
+});
+
+test('iPhone/iPad: if the copied text is not a title, the tap says so instead of opening an empty page', async ({ page }) => {
+  await mockApis(page);
+  await installedApp(page, { ios: 'https://example.com/some/page' });
+  await seedOnboarded(page);
+  await page.getByRole('button', { name: 'Search the clipboard text' }).click();
+  await expect(page.getByText(/doesn’t look like a title/)).toBeVisible();
+  await expect(page).toHaveURL(/#\/search$/);
+});

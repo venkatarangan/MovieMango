@@ -7,23 +7,46 @@
 const MAX_LEN = 100;
 const SAME_TEXT_QUIET_MS = 30 * 60_000;
 
-/** The text to search for, or null when the clipboard doesn't look like a title. */
+const URL_TOKEN = /(?:[a-z][a-z0-9+.-]*:\/\/|www\.)\S+/gi;
+const EMAIL_TOKEN = /\S+@\S+\.\S+/g;
+const SITE_SUFFIX = /\s*[-–—|·]\s*(?:imdb|wikipedia|rotten tomatoes|letterboxd|justwatch|tmdb|the movie database|netflix|prime video|jiohotstar|hotstar|sonyliv|zee5)\b.*$/i;
+
+/** One line of a shared snippet: links, emails, wrapping quotes, "(2024)" and "- IMDb" taken off, leaving the title. */
+function tidyLine(line: string): string {
+  return line
+    .replace(URL_TOKEN, ' ')
+    .replace(EMAIL_TOKEN, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(SITE_SUFFIX, '')
+    .replace(/\s*[([]\s*(?:19|20)\d{2}\s*[)\]]\s*$/, '')
+    .replace(/^["'“”‘’«‹]+|["'“”‘’»›]+$/g, '')
+    .trim();
+}
+
+/**
+ * The text to search for, or null when the clipboard doesn't look like a title.
+ * Shared snippets are common ("Dune" on one line and a link on the next), so the first line that is
+ * more than a link is used. Paragraphs, code, long unbroken strings (keys) and numbers are not titles.
+ */
 export function clipboardQuery(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  const text = raw.replace(/\s+/g, ' ').trim();
-  if (text.length < 2 || text.length > MAX_LEN) return null;
-  // Several lines of prose, a list, code or JSON are not a title.
-  if ((raw.trim().match(/\n/g)?.length ?? 0) > 1) return null;
-  if (/^[{[<]/.test(text)) return null;
-  // Links and email addresses (a shared link is not a title; the Import page handles lists).
-  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(text) || /^www\./i.test(text) || /\S+@\S+\.\S+/.test(text)) return null;
+  const lines = raw.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (!lines.length || lines.length > 8 || /^[{[<]/.test(lines[0])) return null;
+  // Lines that were only a link or email drop out; a title plus one line of detail ("Telugu, 2022") is fine, a paragraph is not.
+  const content = lines.map(tidyLine).filter(Boolean);
+  if (!content.length || content.length > 2) return null;
+  return acceptable(content[0]) ? content[0] : null;
+}
+
+function acceptable(text: string): boolean {
+  if (text.length < 2 || text.length > MAX_LEN) return false;
   // One long unbroken string is much more likely a key, token or password than a title.
-  if (!/\s/.test(text) && (text.length > 24 || (text.length >= 16 && /\d/.test(text) && /[a-z]/.test(text) && /[A-Z]/.test(text)))) return null;
+  if (!/\s/.test(text) && (text.length > 24 || (text.length >= 16 && /\d/.test(text) && /[a-z]/.test(text) && /[A-Z]/.test(text)))) return false;
   // Titles in any script (Tamil, Hindi…) have letters; only a bare four-digit number such as "1917" is allowed without.
-  if (!/\p{L}/u.test(text)) return /^\d{4}$/.test(text) ? text : null;
+  if (!/\p{L}/u.test(text)) return /^\d{4}$/.test(text);
   const digits = (text.match(/\d/g) ?? []).length;
-  if (digits > 8 && digits / text.length > 0.4) return null;
-  return text;
+  return !(digits > 8 && digits / text.length > 0.4);
 }
 
 /** Small, fast, non-cryptographic hash (FNV-1a) of the normalised text. */

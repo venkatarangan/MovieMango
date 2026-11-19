@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1 (2026-11-19)
+
+- Clipboard search fix: shared text such as a title followed by a link is cleaned to just the title (links, emails, quotes, a trailing "(2024)" or "- IMDb" are removed), so the search finds it. Before, the link stayed in the search text and nothing matched.
+- If you tap "Search the clipboard text" and what you copied can't be searched (a link only, a paragraph, a key, an empty clipboard, or the phone refusing to share it), a short message says so instead of opening an empty Search page.
+
 ## 0.5.0 (2026-11-19)
 
 - Skip AI: setup now has a clear "Skip AI for now" (Basic mode), and a slow Google check for a Gemini key times out after 12 seconds and offers to skip. Tonight works without AI and shows one line instead of a setup card.

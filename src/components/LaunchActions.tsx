@@ -3,6 +3,7 @@ import { Box, Button, Paper, Typography } from '@mui/material';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { saveSettings, useSettings } from '../db/settings';
+import { useToast } from './Toast';
 import { trackEvent } from '../lib/analytics';
 import { clipboardHash, clipboardQuery, readClipboardText, recentlyOffered } from '../lib/clipboard';
 import { isInstalledPwa } from '../lib/pwa';
@@ -22,6 +23,7 @@ let checkedAtStart = false;
 export default function LaunchActions() {
   const settings = useSettings();
   const navigate = useNavigate();
+  const toast = useToast();
   const location = useLocation();
   const [offer, setOffer] = useState<Offer | null>(null);
   const busy = useRef(false);
@@ -76,11 +78,18 @@ export default function LaunchActions() {
     if (offer?.kind === 'text') return go(offer.text);
     const read = await readClipboardText();
     const text = read.ok ? clipboardQuery(read.text) : null;
-    if (text) go(text);
-    else {
-      setOffer(null);
-      navigate('/search');
-    }
+    if (text) return go(text);
+    // Say what happened instead of opening an empty Search page with no explanation.
+    setOffer(null);
+    toast(
+      read.ok
+        ? 'What you copied doesn’t look like a title. Type it in the search box instead.'
+        : read.reason === 'empty'
+          ? 'Your clipboard is empty. Copy a title, then try again.'
+          : 'Your phone didn’t let MovieMango read the clipboard. Tap Paste when it appears, or paste into the search box.',
+      'info',
+    );
+    navigate('/search');
   };
 
   const dismiss = () => {
