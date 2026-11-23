@@ -114,6 +114,7 @@ export default function Person() {
   const life = [p.birthday && `Born ${new Date(p.birthday).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`, p.place_of_birth, p.deathday && `Died ${new Date(p.deathday).getFullYear()}`].filter(Boolean).join(' · ');
   const oldest = checkedHere.reduce((m, c) => Math.min(m, stream.rows.get(c.key)!.checkedAt), Infinity);
   const onName = on ? streamLabel(on).replace(/^On /, '') : '';
+  const onPhrase = on === 'none' ? 'not streaming on any service' : `on ${onName}`;
 
   return (
     <Box>
@@ -171,7 +172,7 @@ export default function Person() {
               <Chip key={k} label={`${k === 'all' ? 'All' : k === 'movie' ? 'Films' : 'Shows'} · ${n[k]}`} color={filter === k ? 'primary' : 'default'} variant={filter === k ? 'filled' : 'outlined'} onClick={() => set('type', k === 'all' ? undefined : k)} disabled={k !== 'all' && !n[k]} />
             ))}
             <Box sx={{ flex: 1 }} />
-            <StreamingSelect value={on} onChange={(v) => set('on', v)} counts={counts} onOpen={() => checkMore(false)} showNone={false} />
+            <StreamingSelect value={on} onChange={(v) => set('on', v)} counts={counts} onOpen={() => checkMore(false)} />
             <Tooltip title={checkedHere.length ? `Where these stream was last checked ${shortDate(oldest)}. Tap to check again (up to ${REFRESH_MAX} titles).` : 'Nothing checked yet. Pick a Streaming option first.'}>
               <span>
                 <IconButton aria-label="Check where these stream again" onClick={() => void refresh()} disabled={!checkedHere.length || !!progress || isOffline()}>
@@ -190,7 +191,7 @@ export default function Person() {
           )}
           {on && !progress && (
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              Showing {shown.length} of {typed.length} on {onName}. Checked {checkedHere.length} of {askable.length} released titles.{' '}
+              Showing {shown.length} of {typed.length} {onPhrase}. Checked {checkedHere.length} of {askable.length} released titles.{' '}
               {unchecked.length > 0 && (
                 <Button size="small" onClick={() => checkMore(true)} sx={{ py: 0, verticalAlign: 'baseline' }}>
                   Check {Math.min(CHECK_BATCH, unchecked.length)} more
@@ -208,9 +209,13 @@ export default function Person() {
             <Typography color="text.secondary" sx={{ py: 4, textAlign: 'center' }}>
               {progress
                 ? 'Checking where these stream…'
-                : unchecked.length
-                  ? `None of the ${checkedHere.length} titles checked so far are on ${onName}. Tap “Check ${Math.min(CHECK_BATCH, unchecked.length)} more” to look further back.`
-                  : `None of ${p.name}’s released titles here are on ${onName} right now.`}
+                : on === 'none'
+                  ? unchecked.length
+                    ? `All ${checkedHere.length} titles checked so far stream somewhere. Tap “Check ${Math.min(CHECK_BATCH, unchecked.length)} more” to look further back.`
+                    : `All of ${p.name}’s released titles here stream somewhere right now.`
+                  : unchecked.length
+                    ? `None of the ${checkedHere.length} titles checked so far are on ${onName}. Tap “Check ${Math.min(CHECK_BATCH, unchecked.length)} more” to look further back.`
+                    : `None of ${p.name}’s released titles here are on ${onName} right now.`}
             </Typography>
           )}
         </>

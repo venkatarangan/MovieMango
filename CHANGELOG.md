@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1 (2026-11-23)
+
+- Person pages: the Streaming menu now has "Not streaming" too, like Library, listing their titles that no service carries in India right now (only titles that have been checked can be counted).
+- About page brought up to date: searching for people, favourite people, where to watch (service filters, logos, your own link and notes), Mangoidiots reviews, and the shared Drive sign-in.
+
 ## 0.6.0 (2026-11-23)
 
 - Search finds people: actors, directors and other crew now show as a "People" row on the Search page (above the titles when a name is the best match, below when a title is), and up to two people appear in the Home search suggestions. Tap one to open their page.

@@ -197,3 +197,17 @@ test('Favourite people sync to Drive in the normal batch, and a removal made els
   const sent = (drive.file as { people: { id: number; deleted?: boolean }[] }).people;
   expect(sent.map((p) => [p.id, !!p.deleted]).sort()).toEqual([[1336965, false], [3, false], [4, true]]);
 });
+
+test('Person page: the Streaming menu has "Not streaming", and it lists titles with no service', async ({ page }) => {
+  await mockApis(page);
+  await seedOnboarded(page);
+  // Title 102 is on no service in India right now (the others keep the shared mock).
+  await page.route('https://api.themoviedb.org/3/movie/102/watch/providers**', (route) => route.fulfill({ json: { id: 102, results: { IN: {} } } }));
+  await page.goto('/#/person/1336965?on=none');
+  await expect(page.getByText(/Showing 1 of 4 not streaming on any service/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('tab', { name: 'Acting (1 of 4)' })).toBeVisible();
+  await page.getByRole('combobox', { name: 'Streaming' }).click();
+  await expect(page.getByRole('option', { name: 'Not streaming (1)' })).toBeVisible();
+  await page.getByRole('option', { name: 'Not streaming (1)' }).click();
+  await expect(page).toHaveURL(/on=none/);
+});

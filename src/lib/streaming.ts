@@ -80,8 +80,8 @@ export function badgeServices(row: StreamingRow | undefined, mine: string[], max
 /** Library filter: Any (undefined), on any of my services, one service, or not streaming anywhere we know. */
 export type StreamFilter = 'mine' | 'none' | (string & {});
 
-/** A Streaming URL param (`on`): 'mine' or a known service key, else nothing. */
-export const validStreamFilter = (v?: string | null): StreamFilter | undefined => (v && (v === 'mine' || serviceByKey(v)) ? v : undefined);
+/** A Streaming URL param (`on`): 'mine', 'none' or a known service key, else nothing. */
+export const validStreamFilter = (v?: string | null): StreamFilter | undefined => (v && (v === 'mine' || v === 'none' || serviceByKey(v)) ? v : undefined);
 
 /** true/false, or undefined when we can't tell yet (never checked, or a custom title). */
 export function matchesStream(row: StreamingRow | undefined, filter: StreamFilter, mine: string[]): boolean | undefined {

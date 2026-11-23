@@ -8,7 +8,7 @@ import { checkMany, checkStreaming, migrateStreamSeen, onLibraryStreamingChanged
 import { applyView } from '../src/lib/listView';
 import { clampBytes, cleanNotes, cleanWatchLink, linkHost } from '../src/lib/notes';
 import { availabilityFrom } from '../src/lib/providers';
-import { badgeServices, isNewRow, matchesStream, needsCheck, nextRow, streamCounts, type StreamingRow } from '../src/lib/streaming';
+import { badgeServices, isNewRow, matchesStream, needsCheck, nextRow, streamCounts, validStreamFilter, type StreamingRow } from '../src/lib/streaming';
 import type { UserItem } from '../src/lib/types';
 import { mergePayloads, type SyncPayload } from '../src/sync/merge';
 
@@ -219,5 +219,15 @@ describe('your link and notes', () => {
     expect(again).toBe(false);
     expect(b.watchLink).toBeUndefined();
     expect(b.notes).toBe('Watch with Amma');
+  });
+});
+
+describe('validStreamFilter', () => {
+  it('accepts mine, none and known services only', () => {
+    expect(validStreamFilter('mine')).toBe('mine');
+    expect(validStreamFilter('none')).toBe('none');
+    expect(validStreamFilter('netflix')).toBe('netflix');
+    expect(validStreamFilter('bogus')).toBeUndefined();
+    expect(validStreamFilter(null)).toBeUndefined();
   });
 });

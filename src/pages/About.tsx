@@ -74,11 +74,14 @@ export default function About() {
       <Box component="ul" sx={{ pl: 2.5, my: 0, '& li': { mb: 0.75 } }}>
         <li><b>Home</b>: search, three “Feeling lucky?” picks, shows to continue, and watchlist titles that are now on your services.</li>
         <li><b>Lists</b>: Watchlist, Watched and up to 50 of your own, with 👎 👍 ❤️ ratings, TV episode progress, and sorting and filters.</li>
-        <li><b>Discover</b>: browse any genre, see everything an actor or director made, and try world picks and a new language every week.</li>
+        <li><b>Discover</b>: browse any genre, try world picks and a new language every week, and search for actors and directors as well as titles. A person’s page lists everything they made and which of it streams on your services.</li>
+        <li><b>Favourite people</b>: tap the heart on an actor or director to keep them in Library → People. It adds nothing to your lists; it only nudges your picks toward their work.</li>
+        <li><b>Where to watch</b>: filter any list or browse page by streaming service, see service logos on posters, and keep your own watch link and notes on a saved title.</li>
+        <li><b>Reviews</b>: read Mangoidiots reviews and their mango ratings inside the app, with an optional AI summary.</li>
         <li><b>Your own titles</b>: add films and shows that aren’t on TMDB, like old serials or home videos.</li>
         <li><b>Import and export</b>: bring lists in from Markdown, IMDb or Letterboxd, and take them out as Markdown any time.</li>
-        <li><b>Sync</b>: back up to your own Google Drive and use it on your phone and computer.</li>
-        <li><b>Install it</b>: add MovieMango to your home screen (Share → Add to Home Screen on iPhone and iPad, Install app on Android). When it opens, it quietly renews your Drive sign-in, and if you’ve just copied a title it offers to search for it (on iPhone and iPad you tap a box and choose Paste). Both are optional, in Settings.</li>
+        <li><b>Sync</b>: back up to your own Google Drive and use it on your phone and computer. Sign in once and every tab in that browser is connected; Google’s sign-ins last about an hour, and MovieMango quietly renews them when it can.</li>
+        <li><b>Install it</b>: add MovieMango to your home screen (Share → Add to Home Screen on iPhone and iPad, Install app on Android). When it opens, if you’ve just copied a title it offers to search for it (on iPhone and iPad you tap a box and choose Paste), and it quietly renews your Drive sign-in, as a browser tab does too. Both are optional, in Settings.</li>
       </Box>
       <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
         The AI runs on your device where possible (Gemini Nano in Chrome, or Qwen), or uses your own Google AI key. AI is optional: you can skip it during setup and MovieMango still picks from your services using your taste, time and mood, just without the written “why”. Add AI any time in Settings.

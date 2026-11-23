@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). §35 Google Analytics switched on (GA_ID set), privacy copy and docs updated (0.4.1). §36 GA/branding check, clean GA page address (0.4.2). §37 README screenshots, blurred (0.4.3). §38 link-preview (OG) tags and image, repo PII clean-up, git email rewritten (0.4.4). §39 installed-app launch (quiet Drive reconnect, clipboard search card) and skipping AI setup (0.5.0). §40 clipboard search fix (0.5.1), §41 iPhone paste box (0.5.2). §42 backup script retired (0.5.3). §43 sync check, shared Drive sign-in across tabs, people in search, favourite people and person-page streaming filter, dependency refresh, Google branding verified (0.6.0). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). §35 Google Analytics switched on (GA_ID set), privacy copy and docs updated (0.4.1). §36 GA/branding check, clean GA page address (0.4.2). §37 README screenshots, blurred (0.4.3). §38 link-preview (OG) tags and image, repo PII clean-up, git email rewritten (0.4.4). §39 installed-app launch (quiet Drive reconnect, clipboard search card) and skipping AI setup (0.5.0). §40 clipboard search fix (0.5.1), §41 iPhone paste box (0.5.2). §42 backup script retired (0.5.3). §43 sync check, shared Drive sign-in across tabs, people in search, favourite people and person-page streaming filter, dependency refresh, Google branding verified (0.6.0). §44 person-page "Not streaming" and About page refresh (0.6.1). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -1218,3 +1218,15 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 - #5: GitHub domain TXT record found in DNS; Google branding confirmed verified by the owner (CLAUDE.md, operations.md updated). #6: mirror folder dropped.
 - #7: all libraries updated (jsdom 31 and vite-plugin-pwa 2 are majors), `npm audit` highs gone.
 - Built as 0.6.0 (not yet pushed).
+
+
+## 44. Thirty-fifth-round prompts (verbatim) and response
+
+> approve. shorten the text you use fill the gap in " D. The old gap". then commit & push.
+
+> in the filter in people page, you added streaming but it didn't show "not streaming" as an option which library page list. also check whether about page is uptodate, if not please do it
+
+- 0.6.0 pushed with the approved privacy wording (item D shortened to one line) and deployed.
+- Person page: "Not streaming" added to the Streaming menu (it had been hidden with `showNone={false}`); `validStreamFilter` accepts `none`; the status and empty-state lines read differently for it. Only titles already checked can be counted. New unit and e2e tests.
+- About page: added people search, favourite people, where to watch, Reviews, shared Drive sign-in; Install-it bullet reworded.
+- Built as 0.6.1 (not yet pushed).
