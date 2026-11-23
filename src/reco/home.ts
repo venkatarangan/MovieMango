@@ -3,9 +3,11 @@ import { checkStreaming } from '../db/streaming';
 import type { Settings } from '../db/settings';
 import { MOVIE_GENRES, TV_GENRES } from '../lib/genres';
 import { otherLanguages } from '../lib/languages';
+import type { FavPerson } from '../lib/people';
 import { resolveProviderIds } from '../lib/providers';
 import { isNewRow, STREAMING_FRESH_MS, type StreamingService } from '../lib/streaming';
 import { isCustom, type MediaType, type TitleSnapshot, type UserItem } from '../lib/types';
+import { pickFavourites } from './people';
 import { buildProfile, topGenres } from './profile';
 
 /** Small seeded PRNG so a shuffle stays stable for one Home visit. */
@@ -90,6 +92,18 @@ export async function worldShelf(settings: Settings, items: UserItem[], seed: nu
   };
   let list = genres.length ? await mixedShelf(settings, params(true)) : [];
   if (list.length < 8) list = [...list, ...(await mixedShelf(settings, params(false)))];
+  const seen = new Set<string>();
+  return shuffle(list.filter((s) => !seen.has(`${s.type}:${s.tmdbId}`) && seen.add(`${s.type}:${s.tmdbId}`)), seed);
+}
+
+/**
+ * Titles with your favourite people (the most recently added few, acting or crew) that stream on your
+ * services. TMDB does the matching (`with_people`, any of them), so it costs one call per type.
+ */
+export async function favouritesShelf(people: FavPerson[], settings: Settings, seed: number): Promise<TitleSnapshot[]> {
+  const ids = pickFavourites(people).map((p) => p.id);
+  if (!ids.length) return [];
+  const list = await mixedShelf(settings, () => ({ with_people: ids.join('|'), sort_by: 'popularity.desc', 'vote_count.gte': 10, page: 1 }));
   const seen = new Set<string>();
   return shuffle(list.filter((s) => !seen.has(`${s.type}:${s.tmdbId}`) && seen.add(`${s.type}:${s.tmdbId}`)), seed);
 }

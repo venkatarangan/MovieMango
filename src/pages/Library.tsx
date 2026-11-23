@@ -1,7 +1,8 @@
 import AddRoundedIcon from '@mui/icons-material/AddRounded';
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
+import FavoriteRoundedIcon from '@mui/icons-material/FavoriteRounded';
 import FileUploadRoundedIcon from '@mui/icons-material/FileUploadRounded';
-import { Box, Button, Card, CardActionArea, Tab, Tabs, Typography } from '@mui/material';
+import { Avatar, Box, Button, Card, CardActionArea, IconButton, Tab, Tabs, Tooltip, Typography } from '@mui/material';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router';
 import { EmptyState } from '../components/common';
@@ -10,9 +11,13 @@ import { NewListDialog } from '../components/ListActions';
 import ListView from '../components/ListView';
 import ShareButton from '../components/ShareButton';
 import TastePortrait from '../components/TastePortrait';
+import { useToast } from '../components/Toast';
+import { img } from '../api/tmdb';
+import { restoreFavourite, setFavourite, useFavouritePeople } from '../db/people';
 import { inView, listLabel, useAllItems, useCustomLists, useListItems } from '../db/items';
 import { everythingToText, listToText, safeFilename } from '../lib/exportText';
 import { listsToMarkdown } from '../lib/markdown';
+import { departmentLabel } from '../lib/people';
 import { MAX_CUSTOM_LISTS, type UserItem } from '../lib/types';
 
 const VIEWS = ['watchlist', 'watched', 'loved', 'notforme'] as const;
@@ -110,7 +115,59 @@ function CustomLists() {
   );
 }
 
-const TABS = [...VIEWS, 'lists'];
+/** Favourite people: a separate list of actors and directors you're interested in. Nothing here is in any title list. */
+function People() {
+  const people = useFavouritePeople();
+  const toast = useToast();
+  if (!people) return null;
+  if (!people.length)
+    return (
+      <EmptyState emoji="🎭" title="No favourite people yet">
+        <Typography variant="body2">Open an actor or director from any title page and tap “Add to favourites”. It adds nothing to your lists. MovieMango just leans a little towards their work when it picks for you.</Typography>
+      </EmptyState>
+    );
+  return (
+    <>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+        {people.length} favourite {people.length === 1 ? 'person' : 'people'}. Their films and shows aren’t added to any list; they only nudge your picks.
+      </Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 1.5 }}>
+        {people.map((p) => (
+          <Card key={p.id} variant="outlined" sx={{ borderRadius: '20px', display: 'flex', alignItems: 'center' }}>
+            <CardActionArea component={RouterLink} to={`/person/${p.id}`} sx={{ p: 1.5, display: 'flex', alignItems: 'center', gap: 1.5, justifyContent: 'flex-start', flex: 1, minWidth: 0 }}>
+              <Avatar src={img(p.profilePath, 'w185')} alt="" sx={{ width: 56, height: 56 }}>
+                {p.name[0]}
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography sx={{ fontWeight: 600 }} noWrap>
+                  {p.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {departmentLabel(p.department) || 'Cast and crew'}
+                </Typography>
+              </Box>
+            </CardActionArea>
+            <Tooltip title="Remove from favourites">
+              <IconButton
+                aria-label={`Remove ${p.name} from favourites`}
+                color="secondary"
+                sx={{ mr: 1 }}
+                onClick={async () => {
+                  const prev = await setFavourite({ id: p.id, name: p.name }, false);
+                  toast(`${p.name} is no longer a favourite.`, 'info', { label: 'Undo', onClick: () => void restoreFavourite({ id: p.id, name: p.name }, prev) });
+                }}
+              >
+                <FavoriteRoundedIcon />
+              </IconButton>
+            </Tooltip>
+          </Card>
+        ))}
+      </Box>
+    </>
+  );
+}
+
+const TABS = [...VIEWS, 'lists', 'people'];
 
 export default function Library() {
   const [params, setParams] = useSearchParams();
@@ -149,8 +206,9 @@ export default function Library() {
         <Tab label="❤️ Loved" />
         <Tab label="👎 Not for me" />
         <Tab label="My lists" />
+        <Tab label="🎭 People" />
       </Tabs>
-      {tab < VIEWS.length ? <BuiltinList list={VIEWS[tab]} /> : <CustomLists />}
+      {tab < VIEWS.length ? <BuiltinList list={VIEWS[tab]} /> : TABS[tab] === 'people' ? <People /> : <CustomLists />}
     </Box>
   );
 }

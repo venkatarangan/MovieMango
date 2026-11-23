@@ -1,12 +1,12 @@
-import { Box, Chip, Tooltip } from '@mui/material';
+import { Box, Chip, Divider, ListSubheader, MenuItem, TextField, Tooltip } from '@mui/material';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { createContext, useContext, useEffect, useMemo, type ReactNode, type RefObject } from 'react';
 import { img } from '../api/tmdb';
 import { db } from '../db';
 import { useSettings } from '../db/settings';
 import { checkStreaming } from '../db/streaming';
-import { serviceByKey } from '../lib/providers';
-import { badgeServices, isNewRow, needsCheck, type FoundService, type StreamingRow } from '../lib/streaming';
+import { SERVICES, serviceByKey } from '../lib/providers';
+import { badgeServices, isNewRow, needsCheck, type FoundService, type StreamCounts, type StreamFilter, type StreamingRow } from '../lib/streaming';
 import { isCustom, isSaved, itemKey, type TitleSnapshot } from '../lib/types';
 import { useSavedItem } from './TitleActions';
 
@@ -92,5 +92,43 @@ export function StreamingBadge({ snap, hint }: { snap: Pick<TitleSnapshot, 'type
         {more > 0 && <Chip size="small" label={`+${more}`} sx={{ height: 20, fontSize: 11, fontWeight: 700, bgcolor: 'rgba(15,18,24,.7)', color: '#fff' }} />}
       </Box>
     </Tooltip>
+  );
+}
+
+/**
+ * The Streaming dropdown used by the Library lists and the person pages: Any, On my services, one of my
+ * services, other services seen in these titles, and (Library) "Not streaming". Counts come from saved info.
+ * `onOpen` lets the page check titles it hasn't looked at yet.
+ */
+export function StreamingSelect({ value, onChange, counts, onOpen, showNone = true }: { value?: StreamFilter; onChange: (v?: StreamFilter) => void; counts: StreamCounts; onOpen?: () => void; showNone?: boolean }) {
+  const { mine } = useStreaming();
+  const others = SERVICES.filter((s) => !mine.includes(s.key) && counts.byService[s.key]);
+  return (
+    <TextField
+      select
+      size="small"
+      label="Streaming"
+      value={value ?? ''}
+      onChange={(e) => onChange((e.target.value || undefined) as StreamFilter | undefined)}
+      sx={{ minWidth: 170 }}
+      slotProps={{ inputLabel: { shrink: true }, select: { displayEmpty: true, onOpen, MenuProps: { slotProps: { paper: { sx: { maxHeight: 420 } } } } } }}
+    >
+      <MenuItem value="">Any</MenuItem>
+      <MenuItem value="mine">On my services ({counts.mine})</MenuItem>
+      {mine.length > 0 && <ListSubheader>Your services</ListSubheader>}
+      {mine.map((k) => (
+        <MenuItem key={k} value={k}>
+          {serviceByKey(k)?.name ?? k} ({counts.byService[k] ?? 0})
+        </MenuItem>
+      ))}
+      {others.length > 0 && <ListSubheader>Other services</ListSubheader>}
+      {others.map((s) => (
+        <MenuItem key={s.key} value={s.key}>
+          {s.name} ({counts.byService[s.key]})
+        </MenuItem>
+      ))}
+      {showNone && <Divider />}
+      {showNone && <MenuItem value="none">Not streaming ({counts.none})</MenuItem>}
+    </TextField>
   );
 }

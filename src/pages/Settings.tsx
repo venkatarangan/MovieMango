@@ -144,14 +144,14 @@ export default function SettingsPage() {
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
             {isInstalledPwa()
               ? 'You’re using MovieMango as an installed app, so these two shortcuts are on.'
-              : 'These work only in the installed app (Add to Home Screen on iPhone and iPad, Install app on Android), not in a browser tab.'}
+              : 'Reconnecting Google Drive works in a browser tab too. Searching what you copied works only in the installed app (Add to Home Screen on iPhone and iPad, Install app on Android).'}
           </Typography>
           {driveConfigured() && (
             <Toggle
               checked={settings.driveAutoReconnect}
               onChange={(v) => saveSettings({ driveAutoReconnect: v })}
               label="Reconnect Google Drive automatically"
-              help="Google sign-ins last about an hour. When the app opens, MovieMango quietly asks Google for a new one. If Google needs a tap, you’ll see “Reconnect Drive” instead and nothing gets in your way."
+              help="Google sign-ins last about an hour, and all tabs in this browser share one. When the app opens, MovieMango quietly asks Google for a new one. If Google needs a tap, you’ll see “Reconnect Drive” instead and nothing gets in your way."
             />
           )}
           <Toggle

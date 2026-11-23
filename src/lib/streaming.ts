@@ -1,4 +1,4 @@
-import { SERVICES } from './providers';
+import { SERVICES, serviceByKey } from './providers';
 import { isCustom, type UserItem } from './types';
 
 /**
@@ -80,6 +80,9 @@ export function badgeServices(row: StreamingRow | undefined, mine: string[], max
 /** Library filter: Any (undefined), on any of my services, one service, or not streaming anywhere we know. */
 export type StreamFilter = 'mine' | 'none' | (string & {});
 
+/** A Streaming URL param (`on`): 'mine' or a known service key, else nothing. */
+export const validStreamFilter = (v?: string | null): StreamFilter | undefined => (v && (v === 'mine' || serviceByKey(v)) ? v : undefined);
+
 /** true/false, or undefined when we can't tell yet (never checked, or a custom title). */
 export function matchesStream(row: StreamingRow | undefined, filter: StreamFilter, mine: string[]): boolean | undefined {
   if (!row) return undefined;
@@ -98,7 +101,7 @@ export interface StreamCounts {
   custom: number;
 }
 
-export function streamCounts(items: UserItem[], rows: Map<string, StreamingRow>, mine: string[]): StreamCounts {
+export function streamCounts(items: Pick<UserItem, 'key' | 'tmdbId'>[], rows: Map<string, StreamingRow>, mine: string[]): StreamCounts {
   const out: StreamCounts = { mine: 0, none: 0, byService: {}, unknown: 0, custom: 0 };
   for (const i of items) {
     if (isCustom(i)) {

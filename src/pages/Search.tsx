@@ -7,6 +7,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { mediaTypeOf, searchMulti, snapshotFromList, trending } from '../api/tmdb';
 import { EmptyState, ErrorNote, SectionTitle } from '../components/common';
 import CustomTitleDialog from '../components/CustomTitleDialog';
+import PeopleRow from '../components/PeopleRow';
 import PosterCard, { PosterGrid } from '../components/PosterCard';
 import { trackEvent } from '../lib/analytics';
 import { languageName } from '../lib/languages';
@@ -40,14 +41,19 @@ export default function Search() {
   const results = useQuery({ queryKey: ['search', query], queryFn: () => searchMulti(query), enabled: query.length > 1 });
   const popular = useQuery({ queryKey: ['trending'], queryFn: () => trending('week'), enabled: !query });
 
-  const list = (query ? results.data?.results : popular.data?.results)?.filter((r) => r.media_type !== 'person' && (r.poster_path || r.vote_count)) ?? [];
+  const raw = query ? results.data?.results : popular.data?.results;
+  const list = raw?.filter((r) => r.media_type !== 'person' && (r.poster_path || r.vote_count)) ?? [];
+  // Actors, directors and crew that match the text (TMDB ranks them with the titles). Shown above the titles when a person is the
+  // best match (searching a name), below them when a title is (searching a title that happens to share a name).
+  const people = query ? (raw?.filter((r) => r.media_type === 'person' && (r.profile_path || r.known_for?.length)).slice(0, 12) ?? []) : [];
+  const peopleFirst = people.length > 0 && raw?.[0]?.media_type === 'person';
 
   return (
     <Box>
       <TextField
         fullWidth
         autoFocus
-        placeholder="Search movies and TV shows"
+        placeholder="Search movies, TV shows and people"
         value={text}
         onChange={(e) => setText(e.target.value)}
         slotProps={{
@@ -65,7 +71,7 @@ export default function Search() {
       />
       <ErrorNote error={results.error ?? popular.error} />
       <SectionTitle>{query ? `Results for “${query}”` : 'Trending this week'}</SectionTitle>
-      {query && results.isSuccess && list.length === 0 ? (
+      {query && results.isSuccess && list.length === 0 && people.length === 0 ? (
         <EmptyState emoji="🔍" title="No matches">
           Try the original title, or check the spelling.
           <Box sx={{ mt: 2 }}>
@@ -75,13 +81,18 @@ export default function Search() {
           </Box>
         </EmptyState>
       ) : (
-        <PosterGrid>
-          {list.map((r) => {
-            const type = mediaTypeOf(r);
-            const snap = snapshotFromList(r, type);
-            return <PosterCard key={`${type}:${r.id}`} snap={snap} subtitle={[snap.year, type === 'tv' ? 'Series' : 'Movie', languageName(r.original_language)].filter(Boolean).join(' · ')} />;
-          })}
-        </PosterGrid>
+        <>
+          {peopleFirst && <PeopleRow people={people} />}
+          {people.length > 0 && list.length > 0 && <SectionTitle>Films and shows</SectionTitle>}
+          <PosterGrid>
+            {list.map((r) => {
+              const type = mediaTypeOf(r);
+              const snap = snapshotFromList(r, type);
+              return <PosterCard key={`${type}:${r.id}`} snap={snap} subtitle={[snap.year, type === 'tv' ? 'Series' : 'Movie', languageName(r.original_language)].filter(Boolean).join(' · ')} />;
+            })}
+          </PosterGrid>
+          {!peopleFirst && <PeopleRow people={people} />}
+        </>
       )}
       {(results.isLoading || popular.isLoading) && (
         <Box sx={{ display: 'grid', placeItems: 'center', py: 4 }}>
@@ -93,7 +104,7 @@ export default function Search() {
           Trending data from TMDB.
         </Typography>
       )}
-      {query && results.isSuccess && list.length > 0 && (
+      {query && results.isSuccess && (list.length > 0 || people.length > 0) && (
         <Box sx={{ mt: 3, textAlign: 'center' }}>
           <Button startIcon={<AddRoundedIcon />} onClick={() => setAdding(true)}>
             Can’t find it? Add your own title

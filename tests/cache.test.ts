@@ -249,10 +249,11 @@ describe('schema upgrade', () => {
     await v1.table('cache').put({ key: 'c', value: 1, expires: Date.now() + DAY });
     v1.close();
     await db.open();
-    expect(db.verno).toBe(3);
+    expect(db.verno).toBe(4);
     expect((await db.items.get('movie:1'))?.title).toBe('Kept');
     expect(await db.cache.count()).toBe(1);
     expect(await db.titles.count()).toBe(0);
     expect(await db.streaming.count()).toBe(0);
+    expect(await db.people.count()).toBe(0);
   });
 });

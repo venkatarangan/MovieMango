@@ -17,6 +17,7 @@ import { Poster } from '../components/PosterCard';
 import { useToast } from '../components/Toast';
 import { PlayButtons } from '../components/WhereToWatch';
 import { db } from '../db';
+import { getFavouritePeople } from '../db/people';
 import { markNotTonight, restoreItem, setRating, toggleList, useAllItems } from '../db/items';
 import { saveSettings, useSettings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
@@ -139,7 +140,7 @@ export default function Tonight() {
     setError(null);
     try {
       const all = await db.items.toArray();
-      const r = await planTonight(input, settings, all, engine, setStage);
+      const r = await planTonight(input, settings, all, engine, setStage, { people: await getFavouritePeople() });
       setTonightRun({ result: r, hidden: [], at: Date.now(), by: 'user', engineLabel: choice?.id ? ENGINE_LABELS[choice.id] : undefined, sig: settingsSig(settings) });
       trackEvent('tonight', { engine: r.engineUsed, minutes: String(input.minutes), discovery: input.discovery, typed: !!input.freeText });
     } catch (e) {

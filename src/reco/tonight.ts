@@ -2,6 +2,7 @@ import {
   certificationOf,
   discover,
   getDetails,
+  getPerson,
   getRecommendations,
   getWatchProviderCatalogue,
   snapshotFromDetails,
@@ -16,8 +17,10 @@ import type { Settings } from '../db/settings';
 import { genreName, MOVIE_GENRES, TV_GENRES } from '../lib/genres';
 import { languageName, otherLanguages } from '../lib/languages';
 import { availabilityFrom, resolveProviderIds, type Availability } from '../lib/providers';
+import type { FavPerson } from '../lib/people';
 import { isCustom, type MangoRating, type MediaType, type TitleSnapshot, type UserItem } from '../lib/types';
 import { formatRuntime } from '../lib/format';
+import { creditCandidates, pickFavourites, PEOPLE_BONUS } from './people';
 import { buildProfile, topGenres, type TasteProfile } from './profile';
 import {
   AUDIENCE_CERTS,
@@ -45,13 +48,15 @@ export interface TonightInput {
   freeText?: string;
 }
 
-type Source = 'discover' | 'acclaimed' | 'recommended' | 'serendipity' | 'world' | 'watchlist' | 'rewatch';
+type Source = 'discover' | 'acclaimed' | 'recommended' | 'serendipity' | 'world' | 'watchlist' | 'rewatch' | 'people';
 
 interface Candidate {
   snap: TitleSnapshot;
   overview?: string;
   sources: Set<Source>;
   because?: string;
+  /** Name of a favourite person in it (source 'people'). */
+  follow?: string;
   availability: Availability[];
   certification?: string;
   mango?: MangoRating;
@@ -155,7 +160,7 @@ export function applyIntent(input: TonightInput, intent: Intent): TonightInput {
   };
 }
 
-function describeProfile(profile: TasteProfile, items: UserItem[], settings: Settings): string {
+function describeProfile(profile: TasteProfile, items: UserItem[], settings: Settings, favourites: string[] = []): string {
   const genres = topGenres(profile, 6).map(genreName).join(', ') || 'not known yet';
   const favs = profile.seeds.slice(0, 8).map((i) => `${i.title}${i.year ? ` (${i.year})` : ''}${i.rating ? ` [${i.rating === 'love' ? 'loved' : 'liked'}]` : ''}`);
   const dislikes = items.filter((i) => i.rating === 'dislike').slice(0, 5).map((i) => i.title);
@@ -164,6 +169,7 @@ function describeProfile(profile: TasteProfile, items: UserItem[], settings: Set
     `Favourite genres: ${genres}.`,
     `Languages: ${settings.languages.map(languageName).join(', ')}.`,
     favs.length ? `Loves: ${favs.join('; ')}.` : 'No loved titles yet.',
+    favourites.length ? `Favourite people: ${favourites.join(', ')}.` : '',
     dislikes.length ? `Disliked: ${dislikes.join('; ')}.` : '',
   ]
     .filter(Boolean)
@@ -173,6 +179,7 @@ function describeProfile(profile: TasteProfile, items: UserItem[], settings: Set
 function basicWhy(c: Candidate, input: TonightInput): string {
   const parts: string[] = [];
   if (c.sources.has('watchlist')) parts.push('It’s on your watchlist');
+  else if (c.follow) parts.push(`Because you favourited ${c.follow}`);
   else if (c.because) parts.push(`Because you loved ${c.because}`);
   else if (c.sources.has('rewatch')) parts.push('One you loved');
   else if (c.sources.has('world')) parts.push(`A ${languageName(c.snap.originalLanguage)} gem from beyond your usual languages`);
@@ -190,7 +197,7 @@ export async function planTonight(
   items: UserItem[],
   engine: AiEngine | null,
   stage: Stage = () => {},
-  opts: { enrich?: number; total?: number } = {},
+  opts: { enrich?: number; total?: number; people?: FavPerson[] } = {},
 ): Promise<TonightResult> {
   let input: TonightInput = { ...rawInput, want: rawInput.want ?? (rawInput.moodNow ? DEFAULT_WANT[rawInput.moodNow] : undefined) };
   let aiError: string | undefined;
@@ -210,6 +217,7 @@ export async function planTonight(
   const avoidGenres = genresFromWords(intent?.avoid ?? []);
 
   const profile = buildProfile(items);
+  const favourites = pickFavourites(opts.people);
   const byKey = new Map(items.map((i) => [i.key, i]));
   const now = Date.now();
   const types = typesFor(input);
@@ -225,7 +233,7 @@ export async function planTonight(
   const myProviders = [...new Set(settings.services.flatMap((k) => providerIds[k] ?? []))];
 
   const pool = new Map<string, Candidate>();
-  const add = (t: TmdbListItem | TitleSnapshot, type: MediaType, source: Source, because?: string) => {
+  const add = (t: TmdbListItem | TitleSnapshot, type: MediaType, source: Source, because?: string, follow?: string) => {
     const snap = 'tmdbId' in t ? t : snapshotFromList(t, type);
     if (isCustom(snap)) return; // custom titles have no TMDB data or availability
     const key = `${type}:${snap.tmdbId}`;
@@ -233,9 +241,10 @@ export async function planTonight(
     if (existing) {
       existing.sources.add(source);
       existing.because ??= because;
+      existing.follow ??= follow;
       return;
     }
-    pool.set(key, { snap, overview: 'overview' in t ? t.overview : undefined, sources: new Set([source]), because, availability: [], score: 0 });
+    pool.set(key, { snap, overview: 'overview' in t ? t.overview : undefined, sources: new Set([source]), because, follow, availability: [], score: 0 });
   };
 
   stage('Gathering candidates…');
@@ -284,6 +293,15 @@ export async function planTonight(
       );
     }
     for (const i of items) if (i.lists.includes('watchlist') && types.includes(i.type)) add(i, i.type, 'watchlist');
+    // Favourite people: their best-known released titles (real TMDB credits, cached 7 days). The usual filters below still apply.
+    const today = new Date(now).toISOString().slice(0, 10);
+    for (const f of favourites) {
+      jobs.push(
+        getPerson(f.id)
+          .then((person) => creditCandidates(person, types, today).forEach((snap) => add(snap, snap.type, 'people', undefined, f.name)))
+          .catch(() => undefined),
+      );
+    }
     await Promise.all(jobs);
   }
 
@@ -299,7 +317,7 @@ export async function planTonight(
   });
 
   const bonus = (c: Candidate) =>
-    (c.sources.has('watchlist') ? 0.12 : 0) + (c.sources.has('recommended') ? 0.08 : 0) + (c.sources.has('serendipity') && surprise ? 0.1 : 0) + (c.sources.has('world') ? 0.06 : 0) + (c.sources.size - 1) * 0.03;
+    (c.sources.has('watchlist') ? 0.12 : 0) + (c.sources.has('recommended') ? 0.08 : 0) + (c.sources.has('serendipity') && surprise ? 0.1 : 0) + (c.sources.has('world') ? 0.06 : 0) + (c.sources.has('people') ? PEOPLE_BONUS : 0) + (c.sources.size - 1) * 0.03;
   const scoreAll = (list: Candidate[]) => {
     for (const c of list) c.score = totalScore({ snap: c.snap, profile, want: input.want, minutes: input.minutes, surprise, bonus: bonus(c) });
     return list.sort((a, b) => b.score - a.score);
@@ -373,7 +391,7 @@ export async function planTonight(
         const headlines = await withTimeout(newsHeadlines(date).catch(() => [] as string[]), 3000, [] as string[]);
         if (headlines.length) news = `\nToday's news (for tone only; if heavy, lean lighter): ${headlines.join(' | ')}`;
       }
-      const context = `VIEWER\n${describeProfile(profile, items, settings)}
+      const context = `VIEWER\n${describeProfile(profile, items, settings, favourites.map((f) => f.name))}
 
 RIGHT NOW: ${date.toLocaleDateString('en-IN', { weekday: 'long' })} ${partOfDay(date)}, ${date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}.
 Time available: ${input.minutes === 'binge' ? 'wants a series to binge' : formatRuntime(input.minutes)}. Feeling: ${input.moodNow ?? 'not said'}. Wants to: ${input.want ?? 'not said'}. Watching with: ${input.audience}. Wants: ${input.discovery === 'new' ? 'something new' : input.discovery === 'rewatch' ? 'a rewatch' : 'a surprise'}.${anyLanguage ? ' Happy to watch in any language with subtitles.' : ''}${input.freeText ? `\nThey said: "${input.freeText}"` : ''}${news}`;
@@ -387,13 +405,18 @@ Time available: ${input.minutes === 'binge' ? 'wants a series to binge' : format
           languageName(c.snap.originalLanguage),
           c.snap.genreIds.slice(0, 3).map(genreName).join('/'),
           c.availability.map((a) => a.service.name).join('/') || 'not streaming',
-          [c.sources.has('watchlist') && 'on watchlist', c.because && `like ${c.because}`, c.mango && `Mangoidiots: ${c.mango}`].filter(Boolean).join(', ') || '-',
+          [c.sources.has('watchlist') && 'on watchlist', c.because && `like ${c.because}`, c.follow && `with favourite person ${c.follow}`, c.mango && `Mangoidiots: ${c.mango}`].filter(Boolean).join(', ') || '-',
           (c.overview ?? '').slice(0, 100),
         ].join(' | '),
       }));
       const ranked = await rerank(engine, context, lines, PICKS_SHOWN);
       if (ranked.length) {
-        const picks = ranked.map((r, i) => toPick(aiPool[r.n - 1], r.why, i === ranked.length - 1 && ranked.length >= 4));
+        const picks = ranked.map((r, i) => {
+          const c = aiPool[r.n - 1];
+          // The reason should always say who it's for, even if the model forgot.
+          const why = c.follow && !r.why.includes(c.follow) ? `${r.why} Because you favourited ${c.follow}.` : r.why;
+          return toPick(c, why, i === ranked.length - 1 && ranked.length >= 4);
+        });
         // Everything else waits in reserve, best score first, with a plain reason (no extra AI work).
         const chosen = new Set(ranked.map((r) => aiPool[r.n - 1]));
         for (const c of finalists) if (picks.length < total && !chosen.has(c)) picks.push(toPick(c, basicWhy(c, input)));

@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import type { FavPerson } from '../lib/people';
 import type { StreamingRow } from '../lib/streaming';
 import type { CustomList, UserItem } from '../lib/types';
 
@@ -32,6 +33,7 @@ class MovieMangoDb extends Dexie {
   cache!: Table<CacheRow, string>;
   titles!: Table<TitleRow, string>;
   streaming!: Table<StreamingRow, string>;
+  people!: Table<FavPerson, number>;
 
   constructor() {
     super('moviemango');
@@ -45,6 +47,8 @@ class MovieMangoDb extends Dexie {
     this.version(2).stores({ titles: 'key, accessedAt' });
     // v3 adds where-it-streams info per title (src/db/streaming.ts).
     this.version(3).stores({ streaming: 'key, checkedAt' });
+    // v4 adds favourite people (src/lib/people.ts, src/db/people.ts).
+    this.version(4).stores({ people: 'id, updatedAt' });
   }
 }
 

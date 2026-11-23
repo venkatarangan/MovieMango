@@ -2,7 +2,7 @@
 
 *Date: 2026-10-03*
 
-> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). §35 Google Analytics switched on (GA_ID set), privacy copy and docs updated (0.4.1). §36 GA/branding check, clean GA page address (0.4.2). §37 README screenshots, blurred (0.4.3). §38 link-preview (OG) tags and image, repo PII clean-up, git email rewritten (0.4.4). §39 installed-app launch (quiet Drive reconnect, clipboard search card) and skipping AI setup (0.5.0). §40 clipboard search fix (0.5.1), §41 iPhone paste box (0.5.2). §42 backup script retired (0.5.3). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
+> **Status:** §1–6 design, §7–8 first build, §9–10 Drive sign-in, §11–12 local testing and docs, §13–14 publishing, §15–16 key-cost notes and infra check, §17–18 HTTPS, §19 backlog, §20–21 Home page, Drive options, episodes, custom titles, Markdown import, TMDB caching, §22 v0.2.0 docs and app texts, §23 Google OAuth client and Drive cost. §24 v0.3.0: 👎 👍 ❤️ ratings, poster actions, list sort/filter, genre and person pages, world discovery. §25 clean data format (no conversion), docs cleanup, batched Drive sync. §26 version in the footer, phone footer. §27 review covers, review "Add to watchlist", temp folder ignored. §28 version bump rule (0.3.1), build id, Home suggestions replaced in place. §29 Tonight pick actions and remembered picks (0.3.2). §34 streaming filter, logos and saved streaming info across Library/Browse/Home, your link and notes (0.4.0). §35 Google Analytics switched on (GA_ID set), privacy copy and docs updated (0.4.1). §36 GA/branding check, clean GA page address (0.4.2). §37 README screenshots, blurred (0.4.3). §38 link-preview (OG) tags and image, repo PII clean-up, git email rewritten (0.4.4). §39 installed-app launch (quiet Drive reconnect, clipboard search card) and skipping AI setup (0.5.0). §40 clipboard search fix (0.5.1), §41 iPhone paste box (0.5.2). §42 backup script retired (0.5.3). §43 sync check, shared Drive sign-in across tabs, people in search, favourite people and person-page streaming filter, dependency refresh, Google branding verified (0.6.0). **Later rounds replace earlier ones where they differ.** Notes for future sessions: `CLAUDE.md`.
 
 ---
 
@@ -1184,3 +1184,37 @@ Owner's choices: 👎 👍 ❤️ with ❤️ as favourite; corner buttons alway
 - **The local backup script (`backup.bat`, later `backup.ps1`, described in §20–21 and §23 above) is retired and no longer used.** Nothing in CLAUDE.md, docs or README referenced it; its `.gitignore` lines are removed. The old entries above stay as history. The mirror folder `C:\l\dev\aimade\moviemango` was not visible from WSL; delete it by hand if it exists.
 - Shipped as 0.5.3 (no app change).
 
+
+## 43. Thirty-fourth-round prompts (verbatim) and response
+
+> study this project. let me know if everything is in sync. anything pending
+
+> Take up each of these new tasks and after implementation, validate them. launch parallell agents where possible. use sonnet for general tasks and haiku for tool calling, validation and other simpler tasks. 
+>
+> 1. I open the app in one tab in say Microsoft Edge, press reconnect drive and sync with google drive. now, if I open the same app in a new tab or click on a link anywhere in the app and say open in a new tab, the instance in that tab is asking me to reconnect drive again. is there a way to avoid and let the app be signed in my PC too for a longer time without requiring repeated sign-ins?
+>
+> 2. In the person pages like https://watch.mangoidiots.com/#/person/1336965, which open when I click on an actor or director or other stakeholders in a movie or show, this page opens up. here I want to have two features: a) a filter like the one we have in #/library with which to filter the streaming options and see the movie this person is associated with streaming in a particular service. b) can I favourite a person, actor or director, and place in a separate list in the library; i don't want to automatically add all their works into watchlist or anything, just that I am interested in these persons; may be when you recommend movies you can use this also as an input. 
+>
+> 3. When I enter a text in the search box, do you search actors and directors names as well for showing the results?
+>
+>  4. Let me know the proposed text you want to use in privacy for filling the gap, after my approval modify it. 
+>
+> 5. I have completed: verifying mangoidiots.com on your GitHub profile; Google brand verification - are they still showing not done, can you check?. 
+>
+> 6. I have handled the Mirror folder: C:\l\dev\aimade\moviemango, you can forget it.
+>
+> 7. do the Dependency updates. 
+
+> I want you to do #3, search for people, show the results, show a people row.
+
+> the google cloud page at https://console.cloud.google.com/auth/branding?project=moviemango says "Verification status
+>  Your branding has been verified and is being shown to users."
+
+- Sync check: git, CI, live site, docs and tests all matched 0.5.3 (151 unit, 40 e2e). One gap: the privacy "What is counted" list omitted `clipboard_search`, `drive_silent_reconnect`, `lucky_shuffle`, `review_read`, `review_ai_summary`, `my_link_click` and the Tonight `feedback` kind.
+- #1: the token sat in `sessionStorage` (per tab) in a browser; now `localStorage` for every context, shared by tabs via the `storage` event, quiet renewal also in browser tabs. Hard limit stays: one hour, no refresh token without a server.
+- #2: person-page Streaming filter (checked in batches of 24), favourite people (Dexie v4 `people`, tombstones, Drive sync, JSON backup, Library → People, Tonight/Home input; nothing is added to lists).
+- #3: answered that search dropped people (`Search.tsx` filtered them out); built a People row and people in Home suggestions.
+- #4: privacy wording proposed to the owner; not applied until approved.
+- #5: GitHub domain TXT record found in DNS; Google branding confirmed verified by the owner (CLAUDE.md, operations.md updated). #6: mirror folder dropped.
+- #7: all libraries updated (jsdom 31 and vite-plugin-pwa 2 are majors), `npm audit` highs gone.
+- Built as 0.6.0 (not yet pushed).

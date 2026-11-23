@@ -5,9 +5,9 @@ test('Drive sync: one upload per 2-minute batch, sent right away when leaving', 
   await page.clock.install();
   await mockApis(page);
   const drive = await mockGoogle(page);
-  await seedOnboarded(page, { driveConnected: true, driveEmail: 'tester@example.com' });
+  await seedOnboarded(page, { driveConnected: true, driveEmail: 'tester@example.com', driveAutoReconnect: false });
 
-  // No token in this tab yet: reconnecting does the first sync, which creates the file.
+  // No token in this browser yet: reconnecting does the first sync, which creates the file.
   await page.getByRole('button', { name: 'Reconnect Drive' }).click();
   await expect.poll(() => drive.uploads).toBe(1);
 

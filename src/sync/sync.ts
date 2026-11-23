@@ -1,11 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import { db } from '../db';
-import { getSettings, onSettingsSaved, saveSettings } from '../db/settings';
+import { DEFAULT_SETTINGS, getSettings, onSettingsSaved, saveSettings, type Settings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
 import { DriveError, downloadJson, findSyncFile, getFileMeta, uploadJson } from './drive';
-import { driveConfigured, fetchEmail, forgetToken, GoogleAuthError, requestToken, revokeToken, storedToken, type AccessToken } from './google';
+import { driveConfigured, fetchEmail, forgetToken, GoogleAuthError, onSharedTokenChange, requestToken, revokeToken, storedToken, type AccessToken } from './google';
 import { onLibraryStreamingChanged } from '../db/streaming';
-import { isInstalledPwa } from '../lib/pwa';
 import { libraryStreaming, mergePayloads, pickSynced, sameContent, type SyncPayload } from './merge';
 
 export type SyncStatus = 'off' | 'idle' | 'pending' | 'syncing' | 'needs-auth' | 'error';
@@ -58,7 +57,8 @@ async function localPayload(): Promise<SyncPayload> {
   const s = await getSettings();
   const items = await db.items.toArray();
   const streaming = libraryStreaming(await db.streaming.toArray(), items);
-  return { app: 'MovieMango', version: 1, savedAt: Date.now(), items, lists: await db.lists.toArray(), streaming, settings: pickSynced(s), settingsUpdatedAt: s.settingsUpdatedAt };
+  const people = await db.people.toArray();
+  return { app: 'MovieMango', version: 1, savedAt: Date.now(), items, lists: await db.lists.toArray(), streaming, ...(people.length ? { people } : {}), settings: pickSynced(s), settingsUpdatedAt: s.settingsUpdatedAt };
 }
 
 /** With key sync off, keys are neither read from nor written to Drive (and any old copy there is removed). */
@@ -71,10 +71,11 @@ function withoutKeys<T extends SyncPayload | null>(p: T): T {
 async function applyLocally(merged: SyncPayload) {
   applyingRemote = true;
   try {
-    await db.transaction('rw', db.items, db.lists, db.streaming, async () => {
+    await db.transaction('rw', db.items, db.lists, db.streaming, db.people, async () => {
       await db.items.bulkPut(merged.items);
       await db.lists.bulkPut(merged.lists);
       if (merged.streaming?.length) await db.streaming.bulkPut(merged.streaming);
+      if (merged.people?.length) await db.people.bulkPut(merged.people);
     });
     await saveSettings({ ...merged.settings, settingsUpdatedAt: merged.settingsUpdatedAt }, { fromSync: true });
   } finally {
@@ -197,19 +198,44 @@ export async function reconnectDrive() {
 /** After a failed quiet renewal, wait this long before trying again (e.g. on the next app resume). */
 const SILENT_RETRY_MS = 5 * 60_000;
 let lastSilentAt = 0;
+/** Another tab of this browser tried a quiet renewal this recently: don't pile on (it will share the token if it worked). */
+const SILENT_SHARED_MS = 30_000;
+const SILENT_SHARED_KEY = 'mm.driveSilentAt';
+
+function otherTabTriedLately(): boolean {
+  try {
+    return Date.now() - Number(localStorage.getItem(SILENT_SHARED_KEY) ?? 0) < SILENT_SHARED_MS;
+  } catch {
+    return false;
+  }
+}
+
+function markSilentTry() {
+  lastSilentAt = Date.now();
+  try {
+    localStorage.setItem(SILENT_SHARED_KEY, String(lastSilentAt));
+  } catch {
+    /* storage unavailable */
+  }
+}
 
 /**
- * Installed app only: when the hour-long token has lapsed, try to renew it without any screen, so the user
- * never has to press "Reconnect". It never interrupts: if Google or the browser needs a tap, the
+ * When the hour-long token has lapsed, try to renew it without any screen (browser tab or installed app), so the
+ * user doesn't have to press "Reconnect". It never interrupts: if Google or the browser needs a tap, the
  * "Reconnect Drive" chip stays and the user signs in when they choose to. Returns true if signed in.
+ * Needs the user to have connected Drive before and `driveAutoReconnect` on.
  */
 export async function silentReconnect(): Promise<boolean> {
-  if (!driveConfigured() || !isInstalledPwa() || state.status === 'off') return false;
+  if (!driveConfigured() || state.status === 'off') return false;
   const s = await getSettings();
   if (!s.driveConnected || !s.driveAutoReconnect) return false;
-  if (validToken()) return true;
-  if (Date.now() - lastSilentAt < SILENT_RETRY_MS) return false;
-  lastSilentAt = Date.now();
+  if (validToken()) {
+    // A token from another tab arrived while this one was waiting for a sign-in.
+    if (state.status === 'needs-auth') await syncNow();
+    return true;
+  }
+  if (Date.now() - lastSilentAt < SILENT_RETRY_MS || otherTabTriedLately()) return false;
+  markSilentTry();
   try {
     token = await requestToken({ silent: true, hint: s.driveEmail });
   } catch {
@@ -222,28 +248,70 @@ export async function silentReconnect(): Promise<boolean> {
   return true;
 }
 
-export async function disconnectDrive() {
-  await revokeToken(token?.token ?? storedToken()?.token);
+/** Forgets everything about the connection in this tab (memory only; the caller handles settings and storage). */
+function dropConnection() {
   token = null;
   fileId = undefined;
   remoteCopy = null;
   dirty = false;
   clearTimeout(timer);
   timer = undefined;
+}
+
+export async function disconnectDrive() {
+  const t = token?.token ?? storedToken()?.token;
+  // Settings first: other tabs read them when the cleared token reaches them, to tell a disconnect from an expiry.
   await saveSettings({ driveConnected: false, driveEmail: '' }, { fromSync: true });
+  await revokeToken(t);
+  dropConnection();
   set({ status: 'off' });
+}
+
+/** Settings as another tab last saved them: this tab's in-memory copy may not have heard yet. */
+async function freshSettings(): Promise<Settings> {
+  const row = await db.kv.get('settings');
+  return { ...DEFAULT_SETTINGS, ...((row?.value as Partial<Settings>) ?? {}) };
+}
+
+/**
+ * Another tab of this browser saved or cleared the shared token. A tab waiting at "Reconnect Drive" becomes
+ * connected, and a tab whose Drive was disconnected elsewhere goes quiet. At most one sync, only if something
+ * is waiting or the data is stale, after a short random delay, so several tabs don't hit Drive together.
+ */
+async function onSharedToken(t: AccessToken | null) {
+  if (state.status === 'off') return;
+  const s = await freshSettings();
+  if (!s.driveConnected) {
+    dropConnection();
+    set({ status: 'off' });
+    return;
+  }
+  if (!t) {
+    token = null;
+    if (state.status !== 'syncing') set({ status: 'needs-auth' });
+    return;
+  }
+  if (!token || token.expiresAt <= t.expiresAt) token = t;
+  if (state.status !== 'needs-auth') return;
+  set({ status: dirty ? 'pending' : 'idle' });
+  if (!s.driveAutoSync) return;
+  setTimeout(async () => {
+    // The tab that signed in has usually just synced; look at when, so this one needn't.
+    const now = await freshSettings();
+    if (dirty || Date.now() - Math.max(state.lastSyncAt, now.lastSyncAt ?? 0) > REFRESH_AFTER_MS) void syncNow();
+  }, Math.random() * 2000);
 }
 
 let started = false;
 
-/** Wires change listeners and does an initial sync when a token from this tab is still valid. */
+/** Wires change listeners and does an initial sync when a token from this browser is still valid. */
 export async function startSync() {
   if (started || !driveConfigured()) return;
   started = true;
   const s = await getSettings();
   set({ status: s.driveConnected ? (validToken() ? 'idle' : 'needs-auth') : 'off', lastSyncAt: s.lastSyncAt });
   const onChange = () => scheduleSync();
-  for (const table of [db.items, db.lists]) {
+  for (const table of [db.items, db.lists, db.people]) {
     table.hook('creating', onChange);
     table.hook('updating', onChange);
     table.hook('deleting', onChange);
@@ -260,6 +328,7 @@ export async function startSync() {
     else if (Date.now() - state.lastSyncAt > REFRESH_AFTER_MS && validToken()) whenAuto(() => void syncNow());
   });
   window.addEventListener('pagehide', flush);
+  onSharedTokenChange((t) => void onSharedToken(t));
   if (s.driveConnected && s.driveAutoSync && validToken()) void syncNow();
   else if (s.driveConnected) void silentReconnect();
 }

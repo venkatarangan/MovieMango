@@ -26,6 +26,10 @@ export interface TmdbListItem {
   vote_average?: number;
   vote_count?: number;
   popularity?: number;
+  /** People only (`media_type: 'person'` in multi-search). */
+  profile_path?: string | null;
+  known_for_department?: string;
+  known_for?: { title?: string; name?: string }[];
 }
 
 export interface TmdbPage<T = TmdbListItem> {

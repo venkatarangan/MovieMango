@@ -1,4 +1,4 @@
-import { expect, type Page, type Route } from '@playwright/test';
+import { expect, type BrowserContext, type Page, type Route } from '@playwright/test';
 
 const COLORS = ['#E57373', '#64B5F6', '#81C784', '#FFB74D', '#BA68C8', '#4DB6AC', '#F06292', '#A1887F', '#90A4AE', '#FFD54F'];
 const LANGS = ['ta', 'hi', 'en'];
@@ -110,6 +110,11 @@ function tmdb(path: string, search: URLSearchParams) {
   }
   if (path.startsWith('/find/')) return { movie_results: [title(105)], tv_results: [] };
   if (path.startsWith('/search') && search.get('query')?.includes('zzz')) return page([]);
+  // Multi-search with people: a name query ("Meera") ranks the person first, then a film they are in.
+  if (path === '/search/multi' && search.get('query')?.toLowerCase().includes('meera')) {
+    const person = { id: 99, media_type: 'person', name: 'Meera Rao', known_for_department: 'Directing', profile_path: '/meera.jpg', known_for: [{ title: 'Starfall' }] };
+    return { page: 1, total_pages: 1, total_results: 2, results: [person, ...page([101]).results.map((r) => ({ ...r, media_type: 'movie' }))] };
+  }
   if (path.startsWith('/trending') || path.startsWith('/search')) return { ...page([101, 102, 103, 104, 105, 106, 107, 108]), results: page([101, 102, 103, 104, 105, 106, 107, 108]).results.map((r) => ({ ...r, media_type: 'movie' })) };
   if (path.endsWith('/recommendations')) return page([150, 151, 152, 153]);
   const wp = path.match(/^\/(movie|tv)\/(\d+)\/watch\/providers$/);
@@ -188,8 +193,8 @@ export async function mockApis(page: Page) {
   await page.route('https://www.googletagmanager.com/**', (route) => route.abort());
 }
 
-/** Fake Google sign-in (GIS) and a fake Drive appDataFolder holding at most one file. */
-export async function mockGoogle(page: Page, existing: unknown = null, opts: { silent?: 'ok' | 'fail' } = {}) {
+/** Fake Google sign-in (GIS) and a fake Drive appDataFolder holding at most one file. Pass a context to share one fake Drive between its tabs. */
+export async function mockGoogle(page: Page | BrowserContext, existing: unknown = null, opts: { silent?: 'ok' | 'fail' } = {}) {
   await page.addInitScript((silent) => {
     const w = window as unknown as { __gisPrompts: string[]; google: unknown };
     w.__gisPrompts = [];

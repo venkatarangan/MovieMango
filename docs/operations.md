@@ -15,9 +15,9 @@
 - **Change analytics or Google sign-in:** edit the Actions variable, then re-run the latest workflow (Actions → Test and deploy → Re-run).
 - **Domain health:** `gh api repos/venkatarangan/MovieMango/pages --jq '{cname, https_enforced, cert: .https_certificate.state}'`.
 - **Certificate stuck on "none":** remove the custom domain and add it back (Settings → Pages, or `gh api -X PUT …/pages --input - <<<'{"cname": null}'`, then set `cname` again). That worked within a minute on 2026-10-03.
-- **Optional hardening:** verify `mangoidiots.com` under GitHub profile → Settings → Pages (adds a TXT record in Cloudflare) so nobody else can claim its subdomains.
+- **Domain verification:** `mangoidiots.com` is verified under the GitHub profile → Settings → Pages (TXT record `_github-pages-challenge-venkatarangan` in Cloudflare, done by 2026-11-23), so nobody else can claim its subdomains.
 
 ## External accounts
-- **Google Cloud project** (for the OAuth client): web client created 2026-10-07 and published; brand verification (Branding and Verification Center) still pending, so users see the "unverified app" screen. Setup steps are in `docs/testing-locally.md`; privacy URL `https://watch.mangoidiots.com/privacy.html`.
+- **Google Cloud project** (for the OAuth client): web client created 2026-10-07 and published; branding verified (Auth → Branding: "Your branding has been verified and is being shown to users", confirmed 2026-11-23). Setup steps are in `docs/testing-locally.md`; privacy URL `https://watch.mangoidiots.com/privacy.html`.
 - **Drive API quota:** sync is batched (at most 3 calls per sync, backoff on rate limits), and calls cost the owner nothing; data counts against each user's Drive.
 - **TMDB and Gemini:** each user brings their own key; the project holds none.

@@ -1,4 +1,5 @@
 import { mergeRecords } from '../lib/backup';
+import { cleanPeople, type FavPerson } from '../lib/people';
 import type { StreamingRow } from '../lib/streaming';
 import { isSaved, type CustomList, type UserItem } from '../lib/types';
 import { SYNCED_SETTINGS, type SyncedSettings } from '../db/settings';
@@ -11,6 +12,8 @@ export interface SyncPayload {
   lists: CustomList[];
   /** Where library titles stream (optional: older app versions don't send it). */
   streaming?: StreamingRow[];
+  /** Favourite people, with removal tombstones (optional: older app versions don't send it). */
+  people?: FavPerson[];
   settings: Partial<SyncedSettings>;
   settingsUpdatedAt: number;
 }
@@ -30,6 +33,7 @@ export function mergePayloads(local: SyncPayload, remote: SyncPayload | null): S
   const [winner, loser] = localWins ? [local.settings, remote.settings] : [remote.settings, local.settings];
   const settings: Partial<SyncedSettings> = { ...loser, ...winner };
   for (const k of ['tmdbToken', 'geminiKey'] as const) if (!settings[k] && loser[k]) settings[k] = loser[k];
+  const people = mergePeople(local.people, remote.people);
   return {
     app: 'MovieMango',
     version: 1,
@@ -37,9 +41,15 @@ export function mergePayloads(local: SyncPayload, remote: SyncPayload | null): S
     items,
     lists: mergeRecords(local.lists, remote.lists ?? [], (l) => l.id),
     streaming: libraryStreaming(mergeRecords(local.streaming ?? [], remote.streaming ?? [], (r) => r.key), items),
+    ...(people.length ? { people } : {}),
     settings,
     settingsUpdatedAt: Math.max(local.settingsUpdatedAt, remote.settingsUpdatedAt),
   };
+}
+
+/** Newest-wins per person; a payload without `people` (older app) counts as none. */
+export function mergePeople(local?: FavPerson[], remote?: unknown): FavPerson[] {
+  return mergeRecords(cleanPeople(local), cleanPeople(remote), (p) => String(p.id));
 }
 
 /** Only titles still in the library keep their streaming info in Drive. */

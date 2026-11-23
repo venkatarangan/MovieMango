@@ -1,19 +1,19 @@
 import FilterListRoundedIcon from '@mui/icons-material/FilterListRounded';
 import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import { Badge, Box, Button, Chip, Divider, IconButton, InputAdornment, LinearProgress, ListSubheader, MenuItem, Popover, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Badge, Box, Button, Chip, IconButton, InputAdornment, LinearProgress, MenuItem, Popover, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isOffline } from '../api/http';
 import { checkMany } from '../db/streaming';
 import { genreName } from '../lib/genres';
 import { languageName } from '../lib/languages';
 import { applyView, decadeOf, SORTS, type SortKey, type ViewState } from '../lib/listView';
-import { SERVICES, serviceByKey } from '../lib/providers';
+import { serviceByKey } from '../lib/providers';
 import { MY_RATINGS } from '../lib/ratings';
 import { streamCounts, type StreamFilter } from '../lib/streaming';
 import { isCustom, type UserItem } from '../lib/types';
 import PosterCard, { PosterGrid } from './PosterCard';
-import { useStreaming } from './Streaming';
+import { StreamingSelect, useStreaming } from './Streaming';
 import { useToast } from './Toast';
 
 export const streamLabel = (f: StreamFilter) => (f === 'mine' ? 'On my services' : f === 'none' ? 'Not streaming' : `On ${serviceByKey(f)?.name ?? f}`);
@@ -50,7 +50,6 @@ export default function ListView({ viewKey, items, defaultSort = 'added', action
   const toast = useToast();
   const shown = useMemo(() => applyView(items, view, text, stream), [items, view, text, stream]);
   const counts = useMemo(() => streamCounts(items, stream.rows, stream.mine), [items, stream]);
-  const others = SERVICES.filter((s) => !stream.mine.includes(s.key) && counts.byService[s.key]);
 
   // Checks run through the shared queue (src/db/streaming.ts); this only tracks progress for the line below.
   const [progress, setProgress] = useState<{ kind: 'check' | 'refresh'; done: number; total: number } | null>(null);
@@ -124,32 +123,7 @@ export default function ListView({ viewKey, items, defaultSort = 'added', action
             </MenuItem>
           ))}
         </TextField>
-        <TextField
-          select
-          size="small"
-          label="Streaming"
-          value={view.service ?? ''}
-          onChange={(e) => update({ service: (e.target.value || undefined) as StreamFilter | undefined })}
-          sx={{ minWidth: 170 }}
-          slotProps={{ inputLabel: { shrink: true }, select: { displayEmpty: true, onOpen: checkNew, MenuProps: { slotProps: { paper: { sx: { maxHeight: 420 } } } } } }}
-        >
-          <MenuItem value="">Any</MenuItem>
-          <MenuItem value="mine">On my services ({counts.mine})</MenuItem>
-          {stream.mine.length > 0 && <ListSubheader>Your services</ListSubheader>}
-          {stream.mine.map((k) => (
-            <MenuItem key={k} value={k}>
-              {serviceByKey(k)?.name ?? k} ({counts.byService[k] ?? 0})
-            </MenuItem>
-          ))}
-          {others.length > 0 && <ListSubheader>Other services</ListSubheader>}
-          {others.map((s) => (
-            <MenuItem key={s.key} value={s.key}>
-              {s.name} ({counts.byService[s.key]})
-            </MenuItem>
-          ))}
-          <Divider />
-          <MenuItem value="none">Not streaming ({counts.none})</MenuItem>
-        </TextField>
+        <StreamingSelect value={view.service} onChange={(service) => update({ service })} counts={counts} onOpen={checkNew} />
         <Tooltip title={checked.length ? `Where these stream was last checked ${shortDate(oldest)}. Tap to check again.` : 'Nothing checked yet. Pick a Streaming option first.'}>
           <span>
             <IconButton aria-label="Check where these stream again" onClick={refresh} disabled={!checked.length || !!progress || isOffline()}>

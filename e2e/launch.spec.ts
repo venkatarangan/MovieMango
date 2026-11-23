@@ -124,18 +124,28 @@ test('Installed app on iPhone/iPad: the card offers a box, and pasting into it s
   await expect(page.getByText('Search what you copied?')).toHaveCount(0);
 });
 
-test('Browser tab, or switched off in Settings: no quiet reconnect and no clipboard card', async ({ page }) => {
+test('Browser tab: Drive reconnects quietly too, but there is no clipboard card', async ({ page }) => {
   await mockApis(page);
   await page.addInitScript((t) => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { readText: async () => t } }), FILM);
   const drive = await mockGoogle(page);
   await seedOnboarded(page, { driveConnected: true, driveEmail: 'tester@example.com' });
-  await expect(page.getByRole('button', { name: 'Reconnect Drive' })).toBeVisible();
-  expect(drive.uploads).toBe(0);
-  expect(await page.evaluate(() => (window as unknown as { __gisPrompts: string[] }).__gisPrompts)).toEqual([]);
+  await expect.poll(() => drive.uploads).toBe(1);
+  expect(await page.evaluate(() => (window as unknown as { __gisPrompts: string[] }).__gisPrompts)).toContain('none');
+  await expect(page.getByRole('button', { name: 'Reconnect Drive' })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Search what you copied' })).toHaveCount(0);
   await page.goto('/#/settings');
   await expect(page.getByRole('heading', { name: 'When the app opens' })).toBeVisible();
   await expect(page.getByLabel('Offer to search what I copied')).toBeChecked();
+  await expect(page.getByLabel('Reconnect Google Drive automatically')).toBeChecked();
+});
+
+test('Browser tab with "Reconnect Google Drive automatically" off: the chip stays and Google is never asked', async ({ page }) => {
+  await mockApis(page);
+  const drive = await mockGoogle(page);
+  await seedOnboarded(page, { driveConnected: true, driveEmail: 'tester@example.com', driveAutoReconnect: false });
+  await expect(page.getByRole('button', { name: 'Reconnect Drive' })).toBeVisible();
+  expect(drive.uploads).toBe(0);
+  expect(await page.evaluate(() => (window as unknown as { __gisPrompts: string[] }).__gisPrompts)).toEqual([]);
 });
 
 test('Clipboard card: a shared "title + link" searches the title only', async ({ page }) => {

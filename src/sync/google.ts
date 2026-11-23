@@ -2,12 +2,11 @@
  * Google Identity Services (GIS) token flow, entirely in the browser. We ask only for:
  *  - drive.appdata: a hidden, app-private folder in the user's own Drive (MovieMango can't see any other file)
  *  - openid + email: to show which account is connected
- * Access tokens last about an hour. A new one normally needs a popup, so it must start from a user action;
- * the installed app first tries a quiet renewal (`silent`) and, if Google or the browser says no, leaves the
- * sign-in to a button the user taps when they want it.
+ * Access tokens last about an hour and there is no refresh token (that needs a server holding a client secret).
+ * A new one normally needs a popup, so it must start from a user action; the app first tries a quiet renewal
+ * (`silent`) and, if Google or the browser says no, leaves the sign-in to a button the user taps when they want it.
+ * The token is shared by all tabs of the browser through `localStorage`, so one sign-in covers them all.
  */
-import { isInstalledPwa } from '../lib/pwa';
-
 export const CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined) ?? '';
 export const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.appdata openid email';
 
@@ -70,12 +69,12 @@ export interface AccessToken {
 const STORE = 'mm.driveToken';
 
 /**
- * Keeps the short-lived token (about an hour, and only for MovieMango's own Drive folder) so a reload or
- * a quick reopen doesn't need another sign-in. In a browser tab it lives in this tab only; in the
- * installed app it also survives the app being closed, until it expires.
+ * Keeps the short-lived token (about an hour, and only for MovieMango's own Drive folder) in `localStorage`,
+ * so every tab of this browser, a reload and a quick reopen share one sign-in until it expires. A copy an
+ * older version left in `sessionStorage` is still read (and cleaned up on the next save or sign-out).
  */
 export function storedToken(): AccessToken | null {
-  for (const area of [safeStorage('session'), safeStorage('local')]) {
+  for (const area of [safeStorage('local'), safeStorage('session')]) {
     try {
       const t = JSON.parse(area?.getItem(STORE) ?? 'null') as AccessToken | null;
       if (t && t.expiresAt > Date.now() + 60_000) return t;
@@ -94,16 +93,38 @@ function safeStorage(kind: 'session' | 'local'): Storage | null {
   }
 }
 
-function storeToken(t: AccessToken | null) {
+/** Saves (or, with null, clears everywhere) the token. Other tabs hear about it through the `storage` event. */
+export function storeToken(t: AccessToken | null) {
+  const session = safeStorage('session');
+  const local = safeStorage('local');
   try {
-    const session = safeStorage('session');
-    const local = safeStorage('local');
     session?.removeItem(STORE);
-    local?.removeItem(STORE);
-    if (t) (isInstalledPwa() ? local : session)?.setItem(STORE, JSON.stringify(t));
   } catch {
     /* storage unavailable */
   }
+  try {
+    // One write (no remove first), so other tabs get a single event.
+    if (t) local?.setItem(STORE, JSON.stringify(t));
+    else local?.removeItem(STORE);
+  } catch {
+    // localStorage refused (full or blocked): keep it for this tab only.
+    try {
+      if (t) session?.setItem(STORE, JSON.stringify(t));
+    } catch {
+      /* storage unavailable */
+    }
+  }
+}
+
+/** Calls `fn` when another tab of this browser saves or clears the token. Returns an unsubscribe function. */
+export function onSharedTokenChange(fn: (t: AccessToken | null) => void): () => void {
+  const handler = (e: StorageEvent) => {
+    if (e.key !== STORE && e.key !== null) return;
+    if (e.storageArea && e.storageArea !== safeStorage('local')) return;
+    fn(storedToken());
+  };
+  window.addEventListener('storage', handler);
+  return () => window.removeEventListener('storage', handler);
 }
 
 export class GoogleAuthError extends Error {

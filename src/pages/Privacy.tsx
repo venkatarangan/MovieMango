@@ -13,7 +13,7 @@ export default function Privacy() {
 
       <Typography variant="h6" component="h2">What stays in your browser</Typography>
       <Typography>
-        Your lists, ratings, taste portrait, settings and API keys are stored in your browser (IndexedDB), and in your own Google Drive if you connect it (you can keep keys out of Drive in Settings). Clearing the site’s data, or “Erase everything” in Settings, removes them. Backup files you download never include your keys.
+        Your lists, ratings, favourite people (name, photo and whether they act or direct), taste portrait, settings and API keys are stored in your browser (IndexedDB), and in your own Google Drive if you connect it (you can keep keys out of Drive in Settings). Clearing the site’s data, or “Erase everything” in Settings, removes them. Backup files you download never include your keys.
       </Typography>
 
       <Typography variant="h6" component="h2">Who MovieMango talks to</Typography>
@@ -22,8 +22,8 @@ export default function Privacy() {
           <li><b>TMDB</b>: searches, title details, episode lists and the titles you import, using your own key. Titles you looked at recently are kept in your browser, so MovieMango asks TMDB less often.</li>
           <li><b>Wikipedia and Wikidata</b>: background summaries and, if you turn it on, today’s headlines.</li>
           <li><b>WordPress.com</b>: Mangoidiots reviews, if turned on.</li>
-          <li><b>Google Gemini API</b>: only if you add your own key and use the cloud engine. Your prompt (mood, time, saved titles and candidates) goes to Google. On Google’s free tier, prompts may be used to improve Google’s products.</li>
-          <li><b>Google Drive</b>: only if you sign in with Google. Your lists, ratings, synced settings and (unless you switch it off) API keys are saved to one file in a hidden app folder in <b>your own</b> Drive. MovieMango asks only for that folder (the drive.appdata permission) plus your email address to show which account is connected. It can’t see any of your other files. Disconnect in Settings; to delete the Drive copy, remove MovieMango under Drive → Settings → Manage apps.</li>
+          <li><b>Google Gemini API</b>: only if you add your own key and use the cloud engine. Your prompt (mood, time, saved titles, favourite people and candidates) goes to Google. On Google’s free tier, prompts may be used to improve Google’s products.</li>
+          <li><b>Google Drive</b>: only if you sign in with Google. Your lists, ratings, favourite people, synced settings and (unless you switch it off) API keys are saved to one file in a hidden app folder in <b>your own</b> Drive. MovieMango asks only for that folder (the drive.appdata permission) plus your email address to show which account is connected. It can’t see any of your other files. Disconnect in Settings; to delete the Drive copy, remove MovieMango under Drive → Settings → Manage apps.</li>
           <li><b>Hugging Face</b>: a one-time model download if you choose the Qwen engine.</li>
           <li><b>Streaming services</b>: only when you tap Play, which opens their site or app.</li>
         </ul>
@@ -36,7 +36,7 @@ export default function Privacy() {
 
       <Typography variant="h6" component="h2">Staying signed in to Google Drive</Typography>
       <Typography>
-        Google sign-ins last about an hour. In the installed app, MovieMango keeps that short-lived sign-in on your device until it expires, and quietly asks Google for a new one when the app opens (turn this off in Settings → When the app opens). It can only reach MovieMango’s own folder in your Drive.
+        Google sign-ins last about an hour. MovieMango keeps that short-lived sign-in on your device (in this browser’s storage, shared by your MovieMango tabs) until it expires or you disconnect, so you don’t have to sign in again in every tab. When you open the app, in the installed app or a browser tab, it also quietly asks Google for a new one (turn this off in Settings → When the app opens). It can only reach MovieMango’s own folder in your Drive.
       </Typography>
 
       <Typography variant="h6" component="h2">On-device AI</Typography>
@@ -49,7 +49,7 @@ export default function Privacy() {
             This site uses Google Analytics to count how MovieMango is used, so the author can see what is worth improving. It is on by default; turn it off any time in Settings → Privacy (“Share anonymous usage stats”). Once it’s off, nothing more is sent, and if it’s off when you open the app, the Google Analytics script isn’t even loaded. No personal information is collected.
           </Typography>
           <Typography sx={{ mt: 1 }}>
-            <b>What is counted.</b> Page views: only the kind of page, with ids removed (for example “/title/movie”, never which title), and no search text. Feature use: the name of a feature plus a few small details, such as search was used (never what you searched for), which streaming service’s Play button was tapped, which rating button was used (never for which title), a title was added to or removed from Watchlist, Watched or a custom list (never the list’s name or titles), what kind of share and how, an import started or finished (counts), a Tonight run (AI engine, minutes, discovery on or off, and whether you typed something, never what you typed), onboarding finished (counts), Google Drive connected or failed, keys saved (the fact only, never the key), notes saved (which field, never the content), an episode marked, and a custom title added, edited or deleted.
+            <b>What is counted.</b> Page views: only the kind of page, with ids removed (for example “/title/movie”, never which title), and no search text. Feature use: the name of a feature plus a few small details, such as search was used (never what you searched for), which streaming service’s Play button was tapped, which rating button was used (never for which title), a title was added to or removed from Watchlist, Watched or a custom list (never the list’s name or titles), what kind of share and how, an import started or finished (counts), a Tonight run (AI engine, minutes, discovery on or off, and whether you typed something, never what you typed), onboarding finished (counts), Google Drive connected or failed, keys saved (the fact only, never the key), notes saved (which field, never the content), an episode marked, a custom title added, edited or deleted, a “Feeling lucky” shuffle, a review opened, a tap on your own watch link, Tonight feedback taps (never which title), the clipboard search being used (never the text), and quiet Google sign-in renewals.
           </Typography>
           <Typography sx={{ mt: 1 }}>
             <b>What is never sent.</b> Titles, list names or contents, search words, moods or anything you type, your notes or links, ratings tied to titles, API keys, your Google account email, or anything from your Drive.

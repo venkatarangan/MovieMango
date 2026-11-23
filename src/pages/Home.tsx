@@ -2,16 +2,17 @@ import ArrowForwardRoundedIcon from '@mui/icons-material/ArrowForwardRounded';
 import AutoAwesomeRoundedIcon from '@mui/icons-material/AutoAwesomeRounded';
 import CasinoRoundedIcon from '@mui/icons-material/CasinoRounded';
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
-import { Autocomplete, Box, Button, Card, CardContent, CircularProgress, InputAdornment, Skeleton, TextField, Typography } from '@mui/material';
+import { Autocomplete, Avatar, Box, Button, Card, CardContent, CircularProgress, InputAdornment, Skeleton, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router';
-import { mediaTypeOf, searchMulti, snapshotFromList, type TmdbListItem } from '../api/tmdb';
+import { img, mediaTypeOf, searchMulti, snapshotFromList, type TmdbListItem } from '../api/tmdb';
 import { ErrorNote, SectionTitle } from '../components/common';
 import PosterCard, { Poster, PosterRow } from '../components/PosterCard';
 import { QuickActions } from '../components/TitleActions';
 import { PlayButtons } from '../components/WhereToWatch';
 import { useAllItems, useShowsInProgress } from '../db/items';
+import { useFavouritePeople } from '../db/people';
 import { useSettings, type Settings } from '../db/settings';
 import { trackEvent } from '../lib/analytics';
 import { episodeLabel } from '../lib/episodes';
@@ -20,7 +21,7 @@ import { languageName } from '../lib/languages';
 import { serviceByKey } from '../lib/providers';
 import { fillSlots } from '../lib/slots';
 import type { MediaType, TitleSnapshot, UserItem } from '../lib/types';
-import { languageShelf, randomShelf, streamingNow, worldShelf } from '../reco/home';
+import { favouritesShelf, languageShelf, randomShelf, streamingNow, worldShelf } from '../reco/home';
 import { partOfDay } from '../reco/moods';
 import type { Pick } from '../reco/tonight';
 import { ensureTonightRun, hiddenKeys, useTonightState, validRun } from '../reco/tonightState';
@@ -72,7 +73,9 @@ function SearchHero() {
   const [text, setText] = useState('');
   const query = useDebounced(text.trim(), 300);
   const results = useQuery({ queryKey: ['search', query], queryFn: () => searchMulti(query), enabled: query.length > 1 });
-  const options = (query.length > 1 ? results.data?.results : [])?.filter((r) => r.media_type === 'movie' || r.media_type === 'tv').slice(0, 8) ?? [];
+  const found = query.length > 1 ? (results.data?.results ?? []) : [];
+  // Up to two people (actors, directors) after the titles; they open the person page.
+  const options = [...found.filter((r) => r.media_type === 'movie' || r.media_type === 'tv').slice(0, 7), ...found.filter((r) => r.media_type === 'person' && r.profile_path).slice(0, 2)];
 
   const go = (value: string | TmdbListItem | null) => {
     if (!value) return;
@@ -81,7 +84,7 @@ function SearchHero() {
       return;
     }
     trackEvent('search');
-    navigate(`/title/${mediaTypeOf(value)}/${value.id}`);
+    navigate(value.media_type === 'person' ? `/person/${value.id}` : `/title/${mediaTypeOf(value)}/${value.id}`);
   };
 
   return (
@@ -97,6 +100,22 @@ function SearchHero() {
       loading={results.isFetching}
       noOptionsText="No matches yet"
       renderOption={({ key, ...props }, o) => {
+        if (o.media_type === 'person')
+          return (
+            <Box component="li" key={key} {...props} sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+              <Avatar src={img(o.profile_path, 'w92')} alt="" sx={{ width: 36, height: 36 }}>
+                {(o.name ?? '?')[0]}
+              </Avatar>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
+                  {o.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {o.known_for_department === 'Acting' ? 'Actor' : o.known_for_department === 'Directing' ? 'Director' : (o.known_for_department ?? 'Person')}
+                </Typography>
+              </Box>
+            </Box>
+          );
         const snap = snapshotFromList(o, mediaTypeOf(o));
         return (
           <Box component="li" key={key} {...props} sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
@@ -117,7 +136,7 @@ function SearchHero() {
       renderInput={(params) => (
         <TextField
           {...params}
-          placeholder="Search movies and TV shows"
+          placeholder="Search movies, TV shows and people"
           slotProps={{
             ...params.slotProps,
             input: {
@@ -319,6 +338,20 @@ function WorldShelf({ settings, items, hidden, seed }: { settings: Settings; ite
   );
 }
 
+function FavouritesShelf({ settings, hidden, seed }: { settings: Settings; hidden: Set<string>; seed: number }) {
+  const people = useFavouritePeople();
+  const ids = (people ?? []).slice(0, 8).map((p) => p.id).join(',');
+  const shelf = useQuery({ queryKey: ['fav-people', seed, ids, settings.services], queryFn: () => favouritesShelf(people ?? [], settings, seed), enabled: !!ids && !!settings.tmdbToken, staleTime: Infinity });
+  const list = useSlots(shelf.data ?? [], keyOf, hidden, SHELF_SIZE);
+  return (
+    <Shelf title="🎭 From your favourite people" note="Films and shows with the actors and directors you’ve favourited, on your services." to="/library?tab=people" empty={!list.length}>
+      {list.map((s) => (
+        <PosterCard key={`${s.type}:${s.tmdbId}`} snap={s} subtitle={metaLine(s)} />
+      ))}
+    </Shelf>
+  );
+}
+
 function LanguageOfWeek({ settings, hidden }: { settings: Settings; hidden: Set<string> }) {
   const week = new Date().toDateString();
   const shelf = useQuery({ queryKey: ['lang-week', week, settings.services, settings.languages], queryFn: () => languageShelf(settings), enabled: !!settings.tmdbToken, staleTime: Infinity });
@@ -378,6 +411,7 @@ export default function Home() {
       <StreamingShelf settings={settings} items={items} />
       <RandomShelf type="movie" settings={settings} hidden={hidden} seed={seed} />
       <RandomShelf type="tv" settings={settings} hidden={hidden} seed={seed + 1} />
+      <FavouritesShelf settings={settings} hidden={hidden} seed={seed} />
       <WorldShelf settings={settings} items={items} hidden={hidden} seed={seed} />
       <LanguageOfWeek settings={settings} hidden={hidden} />
 

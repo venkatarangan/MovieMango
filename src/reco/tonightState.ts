@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { db, onCacheReset } from '../db';
+import { getFavouritePeople } from '../db/people';
 import type { Settings } from '../db/settings';
 import { serviceByKey, type Availability } from '../lib/providers';
 import { itemKey, type UserItem } from '../lib/types';
@@ -197,7 +198,7 @@ export function ensureTonightRun(settings: Settings): Promise<void> {
   autoRun = (async () => {
     try {
       const input = snap.state.input;
-      const result = await planTonight(input, settings, await db.items.toArray(), null, undefined, AUTO_RUN);
+      const result = await planTonight(input, settings, await db.items.toArray(), null, undefined, { ...AUTO_RUN, people: await getFavouritePeople() });
       // Someone pressed Find while this ran: theirs wins.
       if (validRun(snap.state, settings)) return;
       setTonightRun({ result, hidden: [], at: Date.now(), by: 'auto', sig });

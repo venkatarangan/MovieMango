@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0 (2026-11-23)
+
+- Search finds people: actors, directors and other crew now show as a "People" row on the Search page (above the titles when a name is the best match, below when a title is), and up to two people appear in the Home search suggestions. Tap one to open their page.
+- Favourite people: a heart on every person page. Your favourites are listed in Library → People, with an Undo when you remove one. Favouriting adds nothing to your Watchlist or other lists. They are stored in your browser, your Drive backup and the JSON backup, and sync between devices.
+- Favourites shape suggestions: Tonight and "Feeling lucky" add a few well-known titles from your favourite people to the pool (still only real TMDB titles, with the usual language, service and watched filters) and say "Because you favourited …". Home has a "From your favourite people" row.
+- Person pages: a Streaming menu like the one in Library and Browse (your services or one service) shows which of their films and shows stream where. Titles are checked in batches of 24, newest first, with a "Check 24 more" button, and the choice is kept in the link.
+- Drive sign-in is shared by all tabs of the same browser: connect once and a new tab, or a link opened in a new tab, is already connected until Google's hour is up. A tab waiting at "Reconnect Drive" connects by itself when another tab signs in, and disconnecting in one tab disconnects all. The quiet renewal that the installed app already used now also runs in browser tabs (Settings → When the app opens). Google gives out one-hour sign-ins with no longer option for a site without a server, so a new sign-in is still needed after an hour when Google won't renew it quietly.
+- Updated all libraries (React 19.3.1, MUI 9.5, React Router 8.5, Vite 8.3.8, Vitest 5.1, Playwright 1.65, jsdom 31, vite-plugin-pwa 2.0, among others); `npm audit` high-severity findings are gone.
+
 ## 0.5.3 (2026-11-19)
 
 - Housekeeping: the local backup script is gone, so its `.gitignore` entries are removed. No change to the app.
